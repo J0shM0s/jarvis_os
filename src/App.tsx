@@ -558,6 +558,49 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
+  // -- typed turns (keyboard fallback beside voice-first) ---------------------
+
+  /**
+   * A line from the composer takes the exact same road as a spoken utterance:
+   * it interrupts an answer in flight and becomes the new turn. Voice keeps
+   * running underneath — typing never mutes the loop.
+   */
+  const onTypedText = (raw: string) => {
+    const text = raw.trim()
+    if (!text) return
+    const phase = store.getState().phase
+    if (phase === 'offline' || phase === 'boot') return
+
+    store.getState().setError(null)
+
+    // A bare "jarvis" typed alone is a greeting, not a question.
+    if (BARE_NAME.test(text)) {
+      // From standby this is the wake itself; mid-conversation just re-open
+      // the window without bothering the model.
+      if (phase === 'dormant') onWake('')
+      else listen(AWAIT_SPEECH_MS)
+      return
+    }
+    const said = text.replace(LEADING_NAME, '').trim() || text
+
+    if (phase === 'dormant' || phase === 'waking' || phase === 'listening') {
+      void respond(said)
+      return
+    }
+    // Busy (thinking / tooling / speaking): cut him off first, exactly like
+    // a spoken barge-in, then answer the typed line.
+    onSpeechStart()
+    void respond(said)
+  }
+
+  const pendingText = useStore((s) => s.pendingText)
+  useEffect(() => {
+    if (!pendingText) return
+    store.getState().clearPendingText()
+    onTypedText(pendingText.text)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingText])
+
   // -- level pump + keys ----------------------------------------------------
 
   useEffect(() => {
@@ -629,11 +672,17 @@ export default function App() {
         return
       }
 
-      // T speaks a fixed line, bypassing the wake word, the recogniser and the
+      // S speaks a fixed line, bypassing the wake word, the recogniser and the
       // model entirely. When "I can't hear him" is the report, this is the one
       // keypress that separates a broken voice engine from a broken voice loop
       // — and it prints the verdict rather than making you infer it.
-      if (e.key === 't' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (
+        (e.key === 's' || e.key === 'S') &&
+        !e.repeat &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
         e.preventDefault()
         silence()
         const t = createSpeaker()
@@ -652,10 +701,48 @@ export default function App() {
       }
 
       // Escape stands the whole thing down — the one thing the old build had
-      // no key for at all.
+      // no key for at all. Except while the composer is open: then it only
+      // closes the box, so a stray Escape never kills the conversation.
       if (e.key === 'Escape') {
         e.preventDefault()
+        if (store.getState().composerOpen) {
+          store.getState().setComposerOpen(false)
+          return
+        }
         if (store.getState().phase !== 'offline') goDormant()
+        return
+      }
+
+      // T / Enter opens the keyboard composer — the fallback beside
+      // voice-first. Voice stays primary: the loop keeps running underneath,
+      // Enter inside the box sends the line through the same turn pipeline
+      // as speech. K and / stay as aliases.
+      if (
+        (e.key === 't' ||
+          e.key === 'T' ||
+          e.key === 'k' ||
+          e.key === 'K' ||
+          e.key === '/' ||
+          e.key === 'Enter') &&
+        !e.repeat &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
+        const st = store.getState()
+        if (st.phase === 'offline') {
+          // Enter (and T) also boot from the ignition screen, like Space.
+          if (e.key === 'Enter' || e.key === 't' || e.key === 'T') {
+            e.preventDefault()
+            void powerOn()
+          }
+          return
+        }
+        if (st.phase === 'boot') return
+        // While open, Enter belongs to the box (send), not to this toggle.
+        if (st.composerOpen && e.key === 'Enter') return
+        e.preventDefault()
+        st.setComposerOpen(!st.composerOpen)
         return
       }
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useStore, accentFor, type Phase } from '../store'
 import { Suggestions } from './Suggestions'
+import { Composer } from './Composer'
 import { BladeSweep, Blades } from './Blades'
 import { Effects } from './Effects'
 import { Pointer } from './Pointer'
@@ -308,11 +309,13 @@ export function Hud() {
 
       {ui.chrome.suggestions && <Suggestions />}
 
+      <Composer />
+
       {error && <div className="error">{error}</div>}
 
       <footer className="hud-bottom">
         <span className="hint">
-          say <b>“hey jarvis”</b> · <kbd>Space</kbd> to talk · <kbd>G</kbd> hands
+          say <b>“hey jarvis”</b> · <kbd>Space</kbd> to talk · <kbd>T</kbd>/<kbd>↵</kbd> type · <kbd>S</kbd> sound · <kbd>G</kbd> hands
           {voice && (
             <>
               {' · '}

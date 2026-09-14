@@ -240,6 +240,11 @@ type State = {
   expandedBlade: string | null
   /** JARVIS's control over his own appearance. UI_DEFAULTS == the stock look. */
   ui: UiState
+  /** Keyboard composer: false = voice-first (Mic), true = text input open.
+   *  Voice keeps running underneath — typing never mutes the loop. */
+  composerOpen: boolean
+  /** A typed line waiting to be answered. App consumes + clears it. */
+  pendingText: { id: string; text: string } | null
 
   setVoice: (v: string) => void
   setGestures: (on: boolean) => void
@@ -260,6 +265,9 @@ type State = {
   setConnected: (c: string[]) => void
   pushTurn: (t: Turn) => void
   appendToLastTurn: (text: string) => void
+  setComposerOpen: (open: boolean) => void
+  submitText: (text: string) => void
+  clearPendingText: () => void
 
   applyUi: (patch: UiPatch) => void
   addOrbit: (o: OrbitObject) => void
@@ -287,6 +295,22 @@ export const useStore = create<State>((set) => ({
   expandedBlade: null,
   bootNote: '',
   ui: defaultUi(),
+  composerOpen: false,
+  pendingText: null,
+
+  setComposerOpen: (composerOpen) => set({ composerOpen }),
+  submitText: (text) => {
+    const clean = text.trim()
+    if (!clean) return
+    set({
+      pendingText: {
+        id: `txt${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+        text: clean,
+      },
+      composerOpen: false,
+    })
+  },
+  clearPendingText: () => set({ pendingText: null }),
 
   setVoice: (voice) => set({ voice }),
   setGestures: (gestures) => set({ gestures }),

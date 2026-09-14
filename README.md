@@ -198,10 +198,11 @@ chose.
 | **"Hey Jarvis"** | Wake him |
 | **Space** | Talk without the wake word |
 | Just speak | Interrupt him mid-sentence (barge-in) |
+| **T** or **Enter** | Type instead of speaking (keyboard input) |
 | **V** | Cycle the browser voice |
-| **Escape** | Stand down |
+| **Escape** | Stand down (closes the typing box first) |
 | **D** | Live diagnostics panel |
-| **T** | One-line audio self-test |
+| **S** | One-line audio self-test |
 
 ---
 
@@ -283,7 +284,7 @@ npm run bridge:writes
 
 **I can't hear him, or he can't hear me.** Press **D** for the diagnostics panel
 — it states plainly whether he is hearing you and whether he is producing sound.
-Press **T** for a one-line audio self-test.
+Press **S** for a one-line audio self-test.
 
 **No voice at all.** You must be in **Chrome or Edge**, in a **real browser
 window** (not an embedded preview), and you must have **allowed the microphone**.

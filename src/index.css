@@ -1896,3 +1896,61 @@ kbd {
   transform: scaleX(-1);
   background: #000;
 }
+
+/* ------------------------------------------------------------------ composer
+   Keyboard fallback beside voice-first. The mic keeps running underneath —
+   this never mutes the loop, it just sends a typed line through the same
+   turn pipeline. Bottom-centre, above the caption, in its own band so it
+   can never collide with the transcript. */
+
+.composer {
+  position: absolute;
+  left: 50%;
+  bottom: 108px;
+  width: min(620px, 72vw);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 8%, rgba(2, 10, 14, 0.88));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 22%, transparent);
+  pointer-events: auto;
+  z-index: 8;
+}
+
+.composer-kicker {
+  font-size: 8px;
+  letter-spacing: 0.34em;
+  opacity: 0.55;
+  flex: 0 0 auto;
+}
+
+.composer-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  appearance: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f2fbff;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.composer-input::placeholder {
+  color: color-mix(in srgb, var(--accent) 55%, transparent);
+  opacity: 0.6;
+}
+
+.composer-keys {
+  flex: 0 0 auto;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  opacity: 0.45;
+  white-space: nowrap;
+}

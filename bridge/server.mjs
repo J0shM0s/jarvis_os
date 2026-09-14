@@ -122,6 +122,13 @@ const MODEL = process.env.JARVIS_MODEL ?? 'claude-opus-5'
 const EFFORT = process.env.JARVIS_EFFORT ?? 'high'
 
 /**
+ * Reasoning effort is a Claude Code concept. Gateways like OpenRouter expose
+ * non-Claude models that reject the parameter, so only send it when running
+ * a real Claude model through Anthropic.
+ */
+const INCLUDE_EFFORT = !process.env.ANTHROPIC_BASE_URL
+
+/**
  * Both spellings of every renamed built-in are listed on purpose. The SDK
  * presents several tools to the model under newer names — Task is Agent,
  * BashOutput is TaskOutput, KillShell is TaskStop, and the MCP resource tools
@@ -1245,7 +1252,7 @@ wss.on('connection', (socket) => {
       // the settings files `settingSources: []` deliberately stops loading, so
       // without this line nothing in the project has a say at all.
       model: MODEL,
-      effort: EFFORT,
+      ...(INCLUDE_EFFORT ? { effort: EFFORT } : {}),
       maxTurns: 24,
       permissionMode: 'default',
       // Without this the SDK only emits whole assistant messages, and JARVIS
