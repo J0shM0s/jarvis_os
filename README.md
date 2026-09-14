@@ -6,25 +6,34 @@ searches the web, generates images, drives your phone, reads your mail. The face
 is a web page (React + Vite + Three.js + custom GLSL). The brain is Claude Code,
 run headless as a library.
 
-**The only subscription you need is Claude Code.** No API keys, no OpenAI
-account, no cloud bill — the brain runs on your existing Claude Code login, and
-the heavy work (the model itself) runs on Anthropic's servers, so even a low-end
-laptop only has to draw the interface. **ElevenLabs is an optional add-on** that
-gives JARVIS a much better voice and sharper hearing; without it he speaks and
-listens through the browser's own speech, and everything still works.
+**The brain runs on any OpenAI-compatible model.** Out of the box this fork
+drives a free OpenRouter model through a tiny local proxy (`brain-proxy.mjs`,
+key in `openrouter.env`) — no Claude subscription needed. Prefer Claude Code?
+Leave `openrouter.env` empty and the bridge reuses your existing Claude Code
+login instead, with usage billed to that account. The heavy work (the model
+itself) always runs server-side, so even a low-end laptop only has to draw the
+interface. **ElevenLabs is an optional add-on** that gives JARVIS a much better
+voice and sharper hearing; without it he speaks and listens through the
+browser's own speech, and everything still works.
 
 ---
 
 ## Requirements
 
-**In one line:** a Claude Code subscription, plus two free things every computer
-can have — Node.js and Chrome. That's the whole list.
+**In one line:** a brain (free OpenRouter key *or* a Claude Code login),
+plus two free things every computer can have — Node.js and Chrome. That's the
+whole list.
 
-- **Claude Code, installed and logged in** — this is the only account you need.
-  Install it with the official method — `npm install -g @anthropic-ai/claude-code`,
-  or the platform installer at <https://docs.claude.com/en/docs/claude-code> —
-  then run `claude` once and complete login. The bridge reuses that login. **No
-  API key**, and usage is billed to your existing Claude account.
+- **A brain — pick one:**
+  - **OpenRouter (default here, free)** — put your key in `openrouter.env`
+    (see `brain-proxy.mjs` header). `start-jarvis.bat` routes the bridge
+    through the local proxy automatically. No Claude account needed.
+  - **Claude Code, installed and logged in** — leave `openrouter.env` empty
+    and the bridge reuses that login. Install it with the official method —
+    `npm install -g @anthropic-ai/claude-code`, or the platform installer at
+    <https://docs.claude.com/en/docs/claude-code> — then run `claude` once
+    and complete login. **No API key**, and usage is billed to your existing
+    Claude account.
 - **Node.js 20 or newer** — free, one installer from <https://nodejs.org>. This
   is a Node web app, so it is the one unavoidable tool.
 - **Google Chrome or Microsoft Edge**, in a **real browser window** — not an
