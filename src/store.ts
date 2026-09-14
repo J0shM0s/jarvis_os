@@ -219,8 +219,8 @@ type State = {
   turns: Turn[]
   activeTool: string | null
   error: string | null
-  /** Brain quota as reported by the OpenRouter free tier, when known. */
-  quota: { limit: number; remaining: number; reset: string | null } | null
+  /** Brain quota + which brain is serving, as reported by the brain proxy. */
+  quota: { limit: number | null; remaining: number | null; reset: string | null; active: string | null } | null
   connected: string[]
   /** Name of the speech-synthesis voice in use, shown in the HUD. */
   voice: string

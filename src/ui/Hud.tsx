@@ -207,11 +207,11 @@ export function Hud() {
                 LISTENING and PROCESSING for the rest of the session. */}
             {phase === 'boot' && bootNote ? bootNote : statusText[phase]}
           </span>
-          {/* What is left of the free brain's day, when that is a thing this
-              session has. A Claude Code login reports no quota and the readout
-              simply does not appear. */}
+          {/* Which brain is answering, and what is left of its day when that
+              is a thing this session has. `BRAIN 12/50` is the online brain's
+              budget; `BRAIN OLLAMA` means the fallback took over. */}
           {quotaLabel(quota) && (
-            <span className={`quota mono${quota && quota.remaining / quota.limit <= 0.2 ? ' low' : ''}`}>
+            <span className={`quota mono${quota && quota.active && quota.active !== 'openrouter' ? ' low' : ''}`}>
               {quotaLabel(quota)}
             </span>
           )}
