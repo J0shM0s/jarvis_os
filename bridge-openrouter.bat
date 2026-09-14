@@ -23,6 +23,10 @@ if defined OPENROUTER_API_KEY if not "%OPENROUTER_API_KEY:~0,5%"=="PASTE" (
   start "JARVIS proxy" /min cmd /c "node brain-proxy.mjs > brain-proxy.out.log 2>&1"
   timeout /t 2 /nobreak >nul
   set "ANTHROPIC_BASE_URL=http://127.0.0.1:8790"
+  rem When the proxy is started with a shared secret, the CLI has to prove it
+  rem knows that secret on every /messages call — the proxy otherwise spends
+  rem the key for anyone on this machine who can dial the loopback port.
+  if defined BRAIN_PROXY_SECRET set "ANTHROPIC_CUSTOM_HEADERS=x-brain-secret: %BRAIN_PROXY_SECRET%"
   rem API-key mode (not AUTH_TOKEN): with a key the CLI trusts the catalog
   rem served by the base URL instead of validating against Anthropic.
   set "ANTHROPIC_AUTH_TOKEN="

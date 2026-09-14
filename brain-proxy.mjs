@@ -13,6 +13,7 @@
  *   BRAIN_PROXY_PORT     default 8790
  */
 import http from 'node:http'
+import crypto from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -33,7 +34,13 @@ try {
 const KEY = (process.env.OPENROUTER_API_KEY || CFG.OPENROUTER_API_KEY || '').trim()
 const TARGET = process.env.OPENROUTER_MODEL || CFG.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free'
 // A port set in openrouter.env counts too — process.env wins, file is the fallback.
+// Validated before startup: `8790x` would otherwise become NaN and kill the
+// server on listen with an error pointing nowhere useful.
 const PORT = Number(process.env.BRAIN_PROXY_PORT || CFG.BRAIN_PROXY_PORT || 8790)
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
+  console.error('[brain-proxy] BRAIN_PROXY_PORT must be an integer from 1 to 65535')
+  process.exit(1)
+}
 const UPSTREAM = 'https://openrouter.ai/api/v1'
 
 // The example ships `paste-your-openrouter-key`; the old check only caught an
@@ -50,6 +57,10 @@ if (!KEY || /^paste\b/i.test(KEY) || KEY.startsWith('PASTE')) {
 if (!KEY.startsWith('sk-or-')) {
   console.warn('[brain-proxy] warning: OPENROUTER_API_KEY does not look like an OpenRouter key (expected "sk-or-…"). Upstream will fail with a misleading "Missing Authentication header".')
 }
+// Shared secret for callers (see the /messages gate below). Generate one with
+// `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`
+// and put the same value in openrouter.env — the bridge reads the file too.
+const SECRET = (process.env.BRAIN_PROXY_SECRET || CFG.BRAIN_PROXY_SECRET || '').trim()
 
 const KNOWN = ['claude-opus-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']
 
@@ -97,6 +108,22 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && path.endsWith('/messages')) {
+    // Caller authentication. The proxy binds to the loopback interface only,
+    // but loopback is not a trust boundary — any process on this machine can
+    // dial 127.0.0.1:8790 and spend the configured OpenRouter key's quota.
+    // A shared secret, read from the same env file the bridge already parses,
+    // closes that: only callers that can read openrouter.env may forward.
+    // Off (backward compatible) until BRAIN_PROXY_SECRET is set anywhere.
+    if (SECRET) {
+      const got = String(req.headers['x-brain-secret'] ?? '')
+      const ok = got.length === SECRET.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(SECRET))
+      if (!ok) {
+        console.log(`[brain-proxy] rejected /messages: bad or missing x-brain-secret`)
+        res.writeHead(401, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: { type: 'authentication_error', message: 'proxy caller authentication failed' } }))
+        return
+      }
+    }
     const chunks = []
     for await (const chunk of req) chunks.push(chunk)
     let payload

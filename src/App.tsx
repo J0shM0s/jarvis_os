@@ -619,6 +619,9 @@ export default function App() {
     const said = text.replace(LEADING_NAME, '').trim() || text
 
     if (phase === 'dormant' || phase === 'waking' || phase === 'listening') {
+      // Waking: the greeting may still be mid-sentence — cut it first, or the
+      // typed answer and the greeting speak over each other.
+      if (phase === 'waking') onSpeechStart()
       void respond(said)
       return
     }
