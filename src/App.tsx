@@ -184,6 +184,37 @@ export default function App() {
 
       if (stale()) return
 
+      /**
+       * A turn can resolve without a single streamed delta — an SDK build that
+       * emits whole messages, or a result that arrives before the first
+       * partial event. Until this existed the resolved text was dropped: no
+       * transcript entry, nothing spoken, and the HUD snapped straight back
+       * from thinking to listening to standby, which read exactly like an
+       * assistant that ignores you. Give such turns the same treatment a
+       * streamed one got: transcript, caption and voice.
+       */
+      const transcript = store
+        .getState()
+        .turns.find((t) => t.id === turnId)?.text
+      if (!started && text) {
+        started = true
+        store.getState().setPhase('speaking')
+        store.getState().setActiveTool(null)
+        music.working(false)
+        store.getState().pushTurn({ id: turnId, role: 'jarvis', text: '' })
+      }
+      if (started && text && transcript !== text) {
+        const last = store.getState().turns.at(-1)
+        if (!last || last.id !== turnId || last.text !== text) {
+          if (last?.id !== turnId) {
+            store.getState().pushTurn({ id: turnId, role: 'jarvis', text })
+          } else {
+            store.getState().appendToLastTurn(text)
+          }
+        }
+        spk.push(text)
+      }
+
       // The bridge keeps conversation state in its own session, so history is
       // only threaded through on the direct path.
       if (!usingBridge) {
@@ -494,7 +525,10 @@ export default function App() {
     await new Promise((r) => setTimeout(r, 9200)) // boot sequence
     await warming
     store.getState().setConnected(connectedLabels())
-    store.getState().setVoice(currentVoiceName())
+    // Probe FIRST, then name the voice. currentVoiceName() reports ElevenLabs
+    // when the bridge says it has a key — asked before the probe, it can only
+    // answer "default", and the HUD then labelled a session that was speaking
+    // ElevenLabs as the browser voice until the next time V was pressed.
 
     // The analyser is what makes the reactor pulse with your voice. It needs a
     // getUserMedia stream; speech recognition does not, and gets its own. So a
@@ -513,6 +547,7 @@ export default function App() {
     // first turn already uses ElevenLabs when a key is present and the browser
     // fallback when it is not — no flag, no reload.
     await probeCapabilities()
+    store.getState().setVoice(currentVoiceName())
 
     // One voice loop, started once, running until the page closes.
     voice.current = await startVoice({
@@ -620,8 +655,20 @@ export default function App() {
     pump()
 
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      // Focused interactive controls own the keyboard: the global shortcuts
+      // preventDefault, which would swallow a blade button's native Enter
+      // activation and stop typing/selecting inside form fields entirely.
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'BUTTON' ||
+        tag === 'A' ||
+        tag === 'SELECT' ||
+        target?.isContentEditable
+      )
+        return
 
       // V auditions the next British voice installed on this machine. Which
       // ones exist varies per Mac, so hearing them beats trusting a ranking.

@@ -27,14 +27,28 @@ try {
   }
 } catch {}
 
-const KEY = process.env.OPENROUTER_API_KEY || CFG.OPENROUTER_API_KEY
+// .trim() matters: openrouter.env parsing is a regex over each line, so a
+// trailing space survives into the key — and OpenRouter reports ANY malformed
+// key as the wildly misleading "Missing Authentication header".
+const KEY = (process.env.OPENROUTER_API_KEY || CFG.OPENROUTER_API_KEY || '').trim()
 const TARGET = process.env.OPENROUTER_MODEL || CFG.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free'
-const PORT = Number(process.env.BRAIN_PROXY_PORT || 8790)
+// A port set in openrouter.env counts too — process.env wins, file is the fallback.
+const PORT = Number(process.env.BRAIN_PROXY_PORT || CFG.BRAIN_PROXY_PORT || 8790)
 const UPSTREAM = 'https://openrouter.ai/api/v1'
 
-if (!KEY || KEY.startsWith('PASTE')) {
-  console.error('[brain-proxy] OPENROUTER_API_KEY missing in openrouter.env')
+// The example ships `paste-your-openrouter-key`; the old check only caught an
+// uppercase PASTE prefix, so an untouched template started the proxy and died
+// upstream with a less useful auth error. Reject the placeholder in any case.
+if (!KEY || /^paste\b/i.test(KEY) || KEY.startsWith('PASTE')) {
+  console.error('[brain-proxy] OPENROUTER_API_KEY missing — copy openrouter.env.example to openrouter.env and paste your key from https://openrouter.ai/keys')
   process.exit(1)
+}
+// Real keys look like sk-or-v1-… (or sk-or-…). A different shape still gets a
+// start, because OpenRouter may mint other prefixes one day — but the warning
+// names the exact trap: the upstream error reads "Missing Authentication
+// header" even though the header was sent.
+if (!KEY.startsWith('sk-or-')) {
+  console.warn('[brain-proxy] warning: OPENROUTER_API_KEY does not look like an OpenRouter key (expected "sk-or-…"). Upstream will fail with a misleading "Missing Authentication header".')
 }
 
 const KNOWN = ['claude-opus-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']
@@ -100,7 +114,9 @@ const server = http.createServer(async (req, res) => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-api-key': KEY,
+            // OpenRouter authenticates with a Bearer token; x-api-key is the
+            // Anthropic convention and gets every request rejected here.
+            authorization: `Bearer ${KEY}`,
             'anthropic-version': req.headers['anthropic-version'] || '2023-06-01',
           },
           body: JSON.stringify(payload),

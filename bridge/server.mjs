@@ -1350,11 +1350,31 @@ wss.on('connection', (socket) => {
             // nothing to say — the HUD stops spinning and JARVIS stands there
             // silent. Say what happened instead.
             if (msg.subtype === 'success') {
-              sendTurn({
-                type: 'done',
-                text: msg.result ?? '',
-                costUsd: msg.total_cost_usd ?? null,
-              })
+              const result = typeof msg.result === 'string' ? msg.result : ''
+              /**
+               * Some fatal conditions arrive disguised as a SUCCESSFUL turn
+               * whose entire result is the complaint — measured on this
+               * machine, a missing login returns `success` with the text
+               * "Not logged in · Please run /login". Sent as 'done' that
+               * string would be filed as the answer (or, before the client
+               * learned to speak unresolved text, dropped on the floor and
+               * the turn would look like it never happened). Name the
+               * problem and the fix instead.
+               */
+              if (/not logged in|please run \/login/i.test(result)) {
+                console.error('[jarvis] brain has no login — run `claude /login`, or set OPENROUTER_API_KEY in openrouter.env and restart')
+                sendTurn({
+                  type: 'error',
+                  message:
+                    'My brain has no login, sir. Run `claude /login` in a terminal — or paste an OpenRouter key into openrouter.env and restart me.',
+                })
+              } else {
+                sendTurn({
+                  type: 'done',
+                  text: result,
+                  costUsd: msg.total_cost_usd ?? null,
+                })
+              }
             } else {
               console.error(
                 `[jarvis] turn failed: ${msg.subtype}`,
