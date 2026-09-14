@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useStore, accentFor, type Phase } from '../store'
+import { quotaLabel } from '../lib/quota'
 import { Suggestions } from './Suggestions'
 import { Composer } from './Composer'
 import { BladeSweep, Blades } from './Blades'
@@ -160,6 +161,7 @@ export function Hud() {
   const gestures = useStore((s) => s.gestures)
   const looking = useStore((s) => s.looking)
   const ui = useStore((s) => s.ui)
+  const quota = useStore((s) => s.quota)
 
   // accentFor folds JARVIS's overrides in over the phase colour, so one
   // variable on the root carries a theme change into every .hud-* rule without
@@ -205,6 +207,14 @@ export function Hud() {
                 LISTENING and PROCESSING for the rest of the session. */}
             {phase === 'boot' && bootNote ? bootNote : statusText[phase]}
           </span>
+          {/* What is left of the free brain's day, when that is a thing this
+              session has. A Claude Code login reports no quota and the readout
+              simply does not appear. */}
+          {quotaLabel(quota) && (
+            <span className={`quota mono${quota && quota.remaining / quota.limit <= 0.2 ? ' low' : ''}`}>
+              {quotaLabel(quota)}
+            </span>
+          )}
         </div>
       </header>
 

@@ -121,6 +121,21 @@ body::after {
   animation: pulse 1.8s ease-in-out infinite;
 }
 
+/* Daily brain budget, next to the phase. Mono like the telemetry rails, dim
+   when plentiful, warning-coloured when the free tier is running out. */
+.quota {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  opacity: 0.55;
+  padding-left: 10px;
+  border-left: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.quota.low {
+  opacity: 1;
+  color: #ffb14d;
+  text-shadow: 0 0 10px rgba(255, 177, 77, 0.55);
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.75); }

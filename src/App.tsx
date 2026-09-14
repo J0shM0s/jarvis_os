@@ -31,6 +31,7 @@ import {
 } from './lib/brain'
 import { startAnalyser, micLevel } from './lib/audio'
 import { probeCapabilities } from './lib/capabilities'
+import { startQuotaPolling } from './lib/quota'
 import { env } from './config'
 
 /**
@@ -232,9 +233,25 @@ export default function App() {
       if (stale()) return
       console.error(err)
       sfx.play('error')
-      store
-        .getState()
-        .setError(err instanceof Error ? err.message : 'Something went wrong.')
+      const msg = err instanceof Error ? err.message : 'Something went wrong.'
+      /**
+       * The free brain's day is spent. A raw 429 message would name retry
+       * budgets and headers; what the person needs to know is that he is not
+       * ignoring them and when he will be back. Spoken, once, plainly.
+       */
+      if (/rate.?limit|429|quota/i.test(msg)) {
+        const quota = store.getState().quota
+        const reset = quota?.reset ? new Date(quota.reset) : null
+        const when =
+          reset && reset.getTime() > Date.now()
+            ? ` I will be back at ${reset.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`
+            : ' The daily allowance resets at midnight.'
+        const line = `My free daily allowance is spent, sir.${when}`
+        store.getState().setError(line)
+        spk.say(line)
+      } else {
+        store.getState().setError(msg)
+      }
     } finally {
       if (!stale()) {
         speaker.current = null
@@ -548,6 +565,7 @@ export default function App() {
     // fallback when it is not — no flag, no reload.
     await probeCapabilities()
     store.getState().setVoice(currentVoiceName())
+    startQuotaPolling()
 
     // One voice loop, started once, running until the page closes.
     voice.current = await startVoice({

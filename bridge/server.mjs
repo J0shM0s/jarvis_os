@@ -694,6 +694,26 @@ const handleRequest = async (req, res) => {
     return res.end(JSON.stringify({ ok: true, tts: eleven, stt: eleven }))
   }
 
+  if (req.method === 'GET' && req.url === '/quota') {
+    // What is left of the brain's daily budget, when the brain is the local
+    // OpenRouter proxy (it reads the x-ratelimit-* headers OpenRouter stamps
+    // on every response). A Claude Code login has no such notion and the
+    // proxy may not be running at all — in both cases the answer is just
+    // `null`, and the HUD omits the readout rather than guessing.
+    let body = null
+    try {
+      const base = process.env.ANTHROPIC_BASE_URL
+      if (base) {
+        const res = await fetch(`${base}/quota`, { signal: AbortSignal.timeout(3000) })
+        if (res.ok) body = await res.json()
+      }
+    } catch {
+      // proxy not running — stays null
+    }
+    res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+    return res.end(JSON.stringify(body))
+  }
+
   // Serve local image files to the page. Screenshots and generated art land on
   // disk as absolute paths, and a page served over http can't read file:// —
   // so the bridge, which can, hands them over.

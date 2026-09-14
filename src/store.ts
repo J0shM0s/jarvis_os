@@ -219,6 +219,8 @@ type State = {
   turns: Turn[]
   activeTool: string | null
   error: string | null
+  /** Brain quota as reported by the OpenRouter free tier, when known. */
+  quota: { limit: number; remaining: number; reset: string | null } | null
   connected: string[]
   /** Name of the speech-synthesis voice in use, shown in the HUD. */
   voice: string
@@ -262,6 +264,7 @@ type State = {
   setCaption: (c: string) => void
   setActiveTool: (t: string | null) => void
   setError: (e: string | null) => void
+  setQuota: (q: { limit: number; remaining: number; reset: string | null } | null) => void
   setConnected: (c: string[]) => void
   pushTurn: (t: Turn) => void
   appendToLastTurn: (text: string) => void
@@ -285,6 +288,7 @@ export const useStore = create<State>((set) => ({
   turns: [],
   activeTool: null,
   error: null,
+  quota: null,
   connected: [],
   voice: '',
   gestures: false,
@@ -375,6 +379,7 @@ export const useStore = create<State>((set) => ({
   setCaption: (caption) => set({ caption }),
   setActiveTool: (activeTool) => set({ activeTool }),
   setError: (error) => set({ error }),
+  setQuota: (quota) => set({ quota }),
   setConnected: (connected) => set({ connected }),
   pushTurn: (turn) => set((s) => ({ turns: [...s.turns.slice(-40), turn] })),
   appendToLastTurn: (text) =>

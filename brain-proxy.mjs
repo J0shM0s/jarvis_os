@@ -43,6 +43,26 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
 }
 const UPSTREAM = 'https://openrouter.ai/api/v1'
 
+/**
+ * Latest rate-limit view of the brain, for the HUD.
+ *
+ * OpenRouter reports the free tier's daily budget on every response —
+ * `x-ratelimit-limit`, `-remaining`, `-reset` — and hitting it used to look
+ * identical to the assistant ignoring you. The latest headers are kept here
+ * and served at /quota so the interface can show what is actually left.
+ */
+const ratelimit = { limit: null, remaining: null, reset: null }
+function noteRatelimit(headers) {
+  const num = (v) => (v === undefined ? null : Number(v) || null)
+  ratelimit.limit = num(headers.get('x-ratelimit-limit')) ?? ratelimit.limit
+  ratelimit.remaining = num(headers.get('x-ratelimit-remaining')) ?? ratelimit.remaining
+  const resetRaw = headers.get('x-ratelimit-reset')
+  if (resetRaw) {
+    const ms = Date.parse(resetRaw)
+    ratelimit.reset = Number.isNaN(ms) ? resetRaw : new Date(ms).toISOString()
+  }
+}
+
 // The example ships `paste-your-openrouter-key`; the old check only caught an
 // uppercase PASTE prefix, so an untouched template started the proxy and died
 // upstream with a less useful auth error. Reject the placeholder in any case.
@@ -74,6 +94,13 @@ const server = http.createServer(async (req, res) => {
   // Match on the PATH only — the CLI appends query strings like ?beta=true,
   // and a suffix match on the full URL silently 404s every real request.
   const path = new URL(req.url, 'http://localhost').pathname
+  // /quota is read by the local page via the bridge; no secret needed and no
+  // logging noise — it polls every minute.
+  if (req.method === 'GET' && path === '/quota') {
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify(ratelimit))
+    return
+  }
   console.log(`[brain-proxy] ${req.method} ${path}${req.url.includes('?') ? ' (query stripped)' : ''}`)
   // The CLI validates the requested model against GET /v1/models when
   // running with an API token. Serve a small catalog of names it accepts.
@@ -157,6 +184,7 @@ const server = http.createServer(async (req, res) => {
       // Free tiers flap: 429/5xx get one automatic retry after a pause.
       if ((upstream.status === 429 || upstream.status >= 500) && attempts < 2) {
         attempts++
+        noteRatelimit(upstream.headers)
         console.log(`[brain-proxy] ${asked} -> ${upstream.status}, retry ${attempts}/2 in 2s`)
         await upstream.text().catch(() => {})
         await new Promise((r) => setTimeout(r, 2000))
@@ -164,6 +192,7 @@ const server = http.createServer(async (req, res) => {
       }
       break
     }
+    noteRatelimit(upstream.headers)
     console.log(`[brain-proxy] ${asked} -> ${TARGET} : ${upstream.status}${attempts ? ` (after ${attempts} retries)` : ''}`)
     if (!upstream.ok) {
       const text = await upstream.text().catch(() => '')
