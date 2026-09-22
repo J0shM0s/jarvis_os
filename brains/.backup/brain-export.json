@@ -1,0 +1,72 @@
+{
+  "exportedAt": "2026-09-22T07:39:39.010Z",
+  "count": 11,
+  "brains": [
+    {
+      "path": "01_general/inbox.md",
+      "content": "# General Inbox — Brain 1\n\n> Schneller Eingang für allgemeines Wissen.\n\n## Interessen & Sprachen\n- **Themen:** KI, IT, Floorball (Unihockey), Gym\n- **Sprachen:** Swiss German (Schweizerdeutsch), German, English\n- **Hinterlegt:** 2026-09-22\n\n## Notizen\n- Fokus: KI & IT\n- Sport: Floorball aktiv, Gym geplant (siehe Personal-Brain)\n\n---\n*JARVIS priorisiert Antworten in Swiss German wenn du so sprichst, sonst Deutsch/English je nach Input.*\n",
+      "size": 440,
+      "mtime": "2026-09-22T07:32:36.957Z"
+    },
+    {
+      "path": "01_general/_index.md",
+      "content": "# Brain 1 — Allgemein (General)\n\n> Das normale Brain. Alles was keinem anderen Brain zugeordnet ist.\n\n## Was hierher gehört\n- Allgemeine Notizen, Ideen, Links\n- Quick Capture / Inbox\n- Wissen das nicht Business und nicht privat ist\n\n## Struktur\n- `inbox.md` — schneller Eingang (JARVIS schreibt hier wenn kein Ziel genannt)\n- Weitere Dateien frei anlegen: `thema.md`, Unterordner erlaubt\n\n## Tags\n#general #inbox\n",
+      "size": 413,
+      "mtime": "2026-09-22T06:41:37.063Z"
+    },
+    {
+      "path": "02_business/inbox.md",
+      "content": "# Business Inbox — Brain 2\n\n> AI Websites an Businesses ohne Website — Region Winterthur, Schweiz\n\n## Business\n- **Was:** AI Websites für Businesses verkaufen die noch keine Website haben\n- **Region:** Winterthur, Schweiz\n- **Status:** 2 Offerten geschickt (Stand 2026-09-22)\n- **Zielgruppe:** Lokale KMU ohne Webauftritt\n\n## Pipeline\n- [ ] Offerte 1 — Follow-up\n- [ ] Offerte 2 — Follow-up\n\n## Notizen\n- Fokus Winterthur — lokal, persönlich, schnell\n",
+      "size": 451,
+      "mtime": "2026-09-22T07:32:42.832Z"
+    },
+    {
+      "path": "02_business/kunden.md",
+      "content": "# Kunden & Leads\n\n| # | Kunde | Ort | Status | Betrag | Notiz |\n|---|-------|-----|--------|--------|-------|\n| 1 | Offerte 1 | Winterthur Region | Offerte geschickt | — | Follow-up offen |\n| 2 | Offerte 2 | Winterthur Region | Offerte geschickt | — | Follow-up offen |\n\n## Zielgruppe\n- KMU ohne Website in Winterthur & Umgebung\n- USP: AI-Website schnell, günstig, modern\n",
+      "size": 372,
+      "mtime": "2026-09-22T07:32:46.611Z"
+    },
+    {
+      "path": "02_business/workflows.md",
+      "content": "# Business Workflows — mächtiger machen\n\nJARVIS kann Workflows per Voice starten: \"run workflow standup\"\n\n## Beispiel-Workflows (sag zum Anlegen: \"Create workflow named X making ...\")\n\n- **standup** — lies 02_business/inbox.md + Kalender + Gmail, fasse Tag zusammen\n- **lead-capture** — nimm Notiz, speichere in 02_business/kunden/<name>.md + business_lead Tool\n- **content-idea** — brain_write business/ideen.md + generiere Bild via higgsfield\n\n> Diese Datei ist nur Doku — echte Workflows liegen im Browser localStorage (per Voice anlegen).\n",
+      "size": 543,
+      "mtime": "2026-09-22T07:25:13.386Z"
+    },
+    {
+      "path": "02_business/ziele.md",
+      "content": "# Business Ziele\n\n- [ ] Erste 5 Kunden in Winterthur gewinnen\n- [ ] 2 Offerten → Abschluss bringen\n- [ ] Referenzen sammeln für weitere Akquise\n\n## Region\nWinterthur, Schweiz — Fokus + Mundpropaganda\n",
+      "size": 200,
+      "mtime": "2026-09-22T07:32:49.995Z"
+    },
+    {
+      "path": "02_business/_index.md",
+      "content": "# Brain 2 — Business\n\n> Alles was JARVIS über dein Business speichert.\n\n## Was hierher gehört\n- Kunden, Leads, Deals, Angebote\n- Strategien, Ideen, Ziele, Finanzen\n- Projekte, SOPs, Notizen zu Firma\n\n## Struktur\n- `inbox.md` — Business Quick Capture\n- `kunden/` — pro Kunde eine Datei (optional)\n- `projekte/` — pro Projekt eine Datei\n- `finanzen.md` — Einnahmen/Ausgaben\n\n## Tags\n#business\n\n## Verknüpfung\n- MCP: `jarvis_memory` category `business` + `jarvis_business` (JSON) sind gespiegelt, aber dieses Folder-Brain ist das führende (Markdown, Obsidian-lesbar).\n",
+      "size": 565,
+      "mtime": "2026-09-22T06:41:45.434Z"
+    },
+    {
+      "path": "03_personal/inbox.md",
+      "content": "# Personal Inbox — Brain 3\n\n- 2026-09-22: Fit, will mit Home-Gym starten (vor richtigem Gym)\n- Unihockey ist #1 Sport\n- Region Winterthur — alles lokal denken\n",
+      "size": 159,
+      "mtime": "2026-09-22T07:32:57.834Z"
+    },
+    {
+      "path": "03_personal/profil.md",
+      "content": "# Profil — Sir Josh\n\n- **Name:** Sir Josh\n- **Geburtstag:** 11.06.2011\n- **Wohnort:** Region Winterthur, Schweiz\n- **Liebt:** Unihockey (Floorball)\n- **Fitness:** Fit, Start mit Gym von zuhause geplant (erst Home-Gym, dann Gym)\n- **Familie:** Eltern + 2 kleinere Brüder\n- **Sprachen:** Swiss German, German, English\n- **Hinterlegt:** 2026-09-22\n\n> JARVIS merkt: Sprich Swiss German wenn Josh so spricht. Unihockey > alles.\n",
+      "size": 423,
+      "mtime": "2026-09-22T07:32:53.789Z"
+    },
+    {
+      "path": "03_personal/_index.md",
+      "content": "# Brain 3 — Personal\n\n> Alles was JARVIS über dich persönlich weiß. Privat. Lokal. Nicht gepusht.\n\n## Was hierher gehört\n- Vorlieben, Routinen, Gesundheit, Ziele\n- Familie, Kontakte, persönliche Notizen\n- Alles was du willst dass JARVIS über dich merkt\n\n## Struktur\n- `inbox.md` — Personal Quick Capture\n- `profil.md` — who you are (JARVIS pflegt)\n- `ziele.md`, `gesundheit.md` — frei\n\n## Datenschutz\n- Dieser Ordner ist besonders sensibel — bleibt lokal, .gitignore geschützt.\n\n## Tags\n#personal #privat\n",
+      "size": 505,
+      "mtime": "2026-09-22T06:41:53.136Z"
+    },
+    {
+      "path": "README.md",
+      "content": "# JARVIS Brains — Obsidian Vault\n\nDieser Ordner ist dein Obsidian-Vault und gleichzeitig JARVIS' Langzeitgedächtnis.\n\n## Die 3 Brains\n\n| Brain | Ordner | Wofür | Beispiel |\n|-------|--------|-------|----------|\n| **1 — Allgemein** | `01_general/` | Normales Wissen, Alltag, generelle Notizen, Quick Capture | Ideen, Links, To-dos ohne Kontext |\n| **2 — Business** | `02_business/` | Alles rund um dein Business — speichert alles über Firma, Kunden, Projekte | Kunden, Angebote, Strategien, Einnahmen |\n| **3 — Personal** | `03_personal/` | Alles was JARVIS über dich persönlich weiß | Vorlieben, Gesundheit, Ziele, Familie |\n\n## Obsidian\n\n1. Obsidian öffnen → \"Open folder as vault\" → diesen `brains/` Ordner wählen.\n2. Sofort alle 3 Brains als Ordner sichtbar, mit Graph View, Suche, Tags.\n3. JARVIS schreibt/liest die gleichen `.md` Dateien — was du in Obsidian tippst, weiß JARVIS Sekunden später (und umgekehrt).\n\n> Dateien sind reines Markdown. JARVIS nutzt `brains.mjs` MCP-Tools für schnellen Zugriff — `brain_write`, `brain_read`, `brain_list`, `brain_search`.\n\n## Schnellstart (Voice)\n\n- \"Merke im Business-Brain: Kunde Acme will Angebot bis Freitag\"\n- \"Was weißt du über mich im Personal-Brain?\"\n- \"Schreib in mein General-Brain: Idee für Video ...\"\n\nAlle Dateien bleiben lokal, werden **nicht** gepusht (`.gitignore`).\n",
+      "size": 1330,
+      "mtime": "2026-09-22T06:41:33.000Z"
+    }
+  ]
+}
