@@ -170,8 +170,16 @@ async function startViteIfDev() {
 function createWindow() {
   try {
     logMain('createWindow ROOT=' + ROOT + ' isPackaged=' + app.isPackaged);
+    let winIcon = undefined;
+    try {
+      const cand = path.join(ROOT, 'public/logo.png');
+      const cand2 = path.join(UNPACKED_ROOT, 'public/logo.png');
+      if (fs.existsSync(cand)) winIcon = cand;
+      else if (fs.existsSync(cand2)) winIcon = cand2;
+    } catch {}
     win = new BrowserWindow({
-      width: 1280, height: 900, backgroundColor: '#01060c', title: 'J.A.R.V.I.S.',
+      width: 1280, height: 900, backgroundColor: '#0a3cff', title: 'J.A.R.V.I.S.',
+      icon: winIcon,
       show: true,
       webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
       autoHideMenuBar: true,
@@ -216,17 +224,24 @@ function createWindow() {
 
 function createTray() {
   try {
-    // Nutze nativeImage für Tray — exe als Icon funktioniert nur via nativeImage
     const { nativeImage } = require('electron');
     let trayIcon = null;
     try {
-      const img = nativeImage.createFromPath(process.execPath);
-      if (!img.isEmpty()) trayIcon = img;
+      const cand = path.join(ROOT, 'public/logo.png');
+      const cand2 = path.join(UNPACKED_ROOT, 'public/logo.png');
+      const p = fs.existsSync(cand) ? cand : (fs.existsSync(cand2) ? cand2 : null);
+      if (p) {
+        const img = nativeImage.createFromPath(p);
+        if (!img.isEmpty()) trayIcon = img.resize({ width: 16, height: 16 });
+      }
     } catch {}
-    if (!trayIcon) {
-      // Fallback: leeres Icon
-      trayIcon = nativeImage.createEmpty();
+    if (!trayIcon || trayIcon.isEmpty()) {
+      try {
+        const img = nativeImage.createFromPath(process.execPath);
+        if (!img.isEmpty()) trayIcon = img;
+      } catch {}
     }
+    if (!trayIcon || trayIcon.isEmpty()) trayIcon = nativeImage.createEmpty();
     tray = new Tray(trayIcon);
     const ctx = Menu.buildFromTemplate([
       { label: 'JARVIS zeigen', click: () => { try { win.show(); win.focus(); } catch {} } },

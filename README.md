@@ -26,7 +26,7 @@ whole list.
 
 - **A brain — pick one:**
   - **OpenRouter (default here, free)** — put your key in `openrouter.env`
-    (see `brain-proxy.mjs` header). `start-jarvis.bat` routes the bridge
+    (see `brain-proxy.mjs` header). `start.bat` routes the bridge
     through the local proxy automatically. No Claude account needed.
   - **Claude Code, installed and logged in** — leave `openrouter.env` empty
     and the bridge reuses that login. Install it with the official method —
@@ -251,7 +251,7 @@ Two ways to power him, picked automatically at start:
 - **OpenRouter (this fork's default, free tier is plenty).** Copy
   `openrouter.env.example` to `openrouter.env`, paste your key from
   <https://openrouter.ai/keys> plus the model you want, then start with
-  `start-jarvis.bat` (or `bridge-openrouter.bat` + `npm run dev`). The local
+  `start.bat` (Doppelklick hidden, `start.bat --show` fuer Debug). The local
   `brain-proxy.mjs` translates between the CLI and OpenRouter, so any
   OpenAI-compatible model works — no Claude account, no Claude subscription.
 - **Paid Claude Code login.** Leave `openrouter.env` empty (or at its
@@ -259,8 +259,8 @@ Two ways to power him, picked automatically at start:
   authenticates off your existing `claude` login; usage is billed to that
   account. Set `JARVIS_MODEL` / `JARVIS_EFFORT` to pick model and effort.
 
-`start-jarvis.bat` prints which path it took (`Brain: OpenRouter (…)` vs
-`Brain: Claude Code login`), so there is never any doubt about what he is
+`start.bat --show` prints which path it took (`[brain] Proxy-Modus` vs
+`[brain] Claude Code Login`), so there is never any doubt about what he is
 thinking with.
 
 ### Bridge

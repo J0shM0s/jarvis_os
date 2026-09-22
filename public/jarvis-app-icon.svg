@@ -1,0 +1,31 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="circleGrad" x1="20%" y1="5%" x2="80%" y2="95%">
+      <stop offset="0%" stop-color="#22f3ff"/>
+      <stop offset="40%" stop-color="#0bb8f5"/>
+      <stop offset="100%" stop-color="#0a3cff"/>
+    </linearGradient>
+    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5af0ff"/>
+      <stop offset="100%" stop-color="#0a7bff"/>
+    </linearGradient>
+    <filter id="eyeGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" rx="240" fill="#0b101e"/>
+  <!-- blue ring -->
+  <circle cx="512" cy="512" r="318" fill="none" stroke="url(#circleGrad)" stroke-width="58" stroke-linecap="round"/>
+  <!-- inner dark -->
+  <circle cx="512" cy="512" r="289" fill="#080c18"/>
+  <!-- helmet silhouette -->
+  <path d="M 512 300 L 588 310 C 612 322 632 345 644 368 L 708 486 L 676 632 C 648 702 602 748 512 748 C 422 748 376 702 348 632 L 316 486 L 380 368 C 392 345 412 322 436 310 Z" fill="#050a14"/>
+  <!-- top notch -->
+  <path d="M 436 310 L 588 310 L 582 328 L 442 328 Z" fill="#050a14"/>
+  <!-- eyes -->
+  <g fill="url(#eyeGrad)" >
+    <path d="M 372 525 L 498 525 L 492 568 L 388 588 L 372 564 Z" />
+    <path d="M 526 525 L 652 525 L 652 564 L 636 588 L 532 568 Z" />
+  </g>
+</svg>

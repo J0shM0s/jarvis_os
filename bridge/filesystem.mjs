@@ -8,6 +8,8 @@ import { homedir } from 'node:os'
 const ALLOWED_ROOTS = [
   homedir(),
   'C:\\Users\\moser\\Projekte',
+  'C:\\Users\\moser\\Projekte\\jarvis_v7\\brains',
+  'C:\\Users\\moser\\Documents',
   'C:\\Temp',
 ].map(p => resolve(p))
 

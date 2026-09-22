@@ -5,12 +5,12 @@ $root = Split-Path $PSScriptRoot -Parent
 $startMenu = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
 $ws = New-Object -ComObject WScript.Shell
 
-# 1. Haupt-Shortcut: startet hidden
+# 1. Haupt-Shortcut: startet hidden (via start.bat -> hidden VBS -> PS1)
 $lnk = $ws.CreateShortcut("$startMenu\JARVIS.lnk")
 $lnk.TargetPath = "wscript.exe"
 $lnk.Arguments = """$root\start-jarvis-hidden.vbs"""
 $lnk.WorkingDirectory = $root
-$lnk.Description = "J.A.R.V.I.S. starten (Hintergrund)"
+$lnk.Description = "J.A.R.V.I.S. starten (start.bat hidden)"
 $lnk.IconLocation = "$root\public\favicon.svg"
 # Falls favicon.svg kein Icon liefert, nutze Edge-Icon
 if (-not (Test-Path "$root\public\favicon.svg")) { $lnk.IconLocation = "shell32.dll,21" }

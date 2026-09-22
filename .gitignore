@@ -33,3 +33,17 @@ openrouter.env
 .credentials/
 workspace-mcp.out.log
 *.out.log
+
+# JARVIS Brains — persönliches Wissen, nicht committen
+brains/01_general/*
+brains/02_business/*
+brains/03_personal/*
+!brains/01_general/_index.md
+!brains/02_business/_index.md
+!brains/03_personal/_index.md
+!brains/README.md
+!brains/.backup/
+!brains/.backup/**
+# inbox + profil dürfen im Repo als Template bleiben, Inhalt wird gitignored via obige Regeln nach Init
+# Obsidian cache ignorieren
+brains/.obsidian/workspace*.json

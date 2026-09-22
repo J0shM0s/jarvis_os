@@ -36,7 +36,7 @@ scope, so every JARVIS session gets it.
 ## 4. Restart JARVIS
 
 Close the two minimized "JARVIS bridge" / "JARVIS face" windows, then
-double-click `start-jarvis.bat`. Then try:
+double-click `start.bat` (oder `start.bat --show` fuer Debug). Dann probiere:
 
 > "Hey Jarvis — what does my day look like? Read me my meetings in order,
 > tell me which one I haven't prepared for, and tell me if anything in my

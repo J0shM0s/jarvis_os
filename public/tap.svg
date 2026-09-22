@@ -1,0 +1,35 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TAP">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#2a4bff"/>
+      <stop offset="55%" stop-color="#0a3cff"/>
+      <stop offset="100%" stop-color="#061a8a"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7aa2ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0a3cff" stop-opacity="0.9"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#0a3cff" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <!-- outer circle -->
+  <g filter="url(#glow)">
+    <circle cx="128" cy="128" r="96" fill="url(#bg)" stroke="url(#rim)" stroke-width="3"/>
+    <!-- inner highlight ring -->
+    <circle cx="128" cy="128" r="84" fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1.5"/>
+  </g>
+  <!-- tap hand icon -->
+  <g transform="translate(128,108)" fill="white">
+    <!-- hand -->
+    <path d="M -10 22 L -10 -8 C -10 -14 -6 -18 0 -18 C 6 -18 10 -14 10 -8 L 10 8 L 18 -4 C 20.5 -7.5 25 -8 27.5 -5.5 C 30 -3 29.5 1.5 26.5 4.5 L 14 17 C 10 21 6 22 0 22 Z" fill="white" fill-opacity="0.98"/>
+    <!-- finger tap ripple -->
+    <circle cx="14" cy="-14" r="3" fill="white" fill-opacity="0.9"/>
+    <circle cx="14" cy="-14" r="9" fill="none" stroke="white" stroke-opacity="0.55" stroke-width="2"/>
+    <circle cx="14" cy="-14" r="16" fill="none" stroke="white" stroke-opacity="0.22" stroke-width="2"/>
+  </g>
+  <!-- TAP label -->
+  <text x="128" y="176" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="6" fill="white">TAP</text>
+  <text x="128" y="194" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" font-weight="600" letter-spacing="3.5" fill="white" fill-opacity="0.72">J.A.R.V.I.S.</text>
+</svg>

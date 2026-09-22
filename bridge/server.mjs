@@ -25,8 +25,9 @@ import { memoryServer, getMemorySnapshot } from './memory.mjs'
 import { osServer } from './os.mjs'
 import { filesystemServer } from './filesystem.mjs'
 import { businessServer } from './business.mjs'
+import { brainsServer } from './brains.mjs'
 import { homedir, tmpdir } from 'node:os'
-import { readFileSync, realpathSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve as resolvePath } from 'node:path'
 import { openRemote, proxyError, vetTarget, PROXY_UA } from './net.mjs'
@@ -128,7 +129,7 @@ const MODEL = process.env.JARVIS_MODEL ?? 'claude-opus-5'
  * matters more than pace; drop back to 'low' when filming and every second of
  * dead air shows.
  */
-const EFFORT = process.env.JARVIS_EFFORT ?? 'high'
+const EFFORT = process.env.JARVIS_EFFORT ?? 'medium'
 
 /**
  * Reasoning effort is a Claude Code concept. Gateways like OpenRouter expose
@@ -301,6 +302,7 @@ function decideTool(name) {
     if (server === 'jarvis_os') return true
     if (server === 'jarvis_fs') return true
     if (server === 'jarvis_business') return true
+    if (server === 'jarvis_brains') return true
 
     const tool = mcpToolOf(name)
     if (EFFECTFUL_VERB.test(tool) && !VETO_EXEMPT.has(`${server}__${tool}`)) {
@@ -462,13 +464,15 @@ Using tools:
  - If a tool fails or isn't connected, one plain sentence saying so.
  - If you don't know, say you don't know.
 
-Your memory — two separate brains:
- - You have tools \`remember\`, \`recall\`, \`forget\`, \`list_memory\`. Use them.
- - When the user says "merke dir", "remember", "speichere", "save my gmail" — call remember immediately. Category is "general" unless business context is obvious.
- - When you need a fact you stored before (gmail, preference, name, etc.), call recall first. Never guess what you stored.
- - Category "general" is private life, "business" is work. In business mode, default to business.
- - Memory persists across restarts at ~/.jarvis/memory.json. Treat it as your long-term brain.
- - If the user asks "was weißt du über mich" or "what do you remember", call list_memory and summarize.
+Your memory — 3 Brains (Obsidian Vault at brains/):
+ - Brain 1 GENERAL (01_general) = normales Brain — Alltag, generelles Wissen, Quick Capture. Files: brains/01_general/*.md
+ - Brain 2 BUSINESS (02_business) = Business Brain — alles über Firma, Kunden, Projekte, Finanzen. Files: brains/02_business/*.md
+ - Brain 3 PERSONAL (03_personal) = Personal Brain — alles was du über den User persönlich weißt. Files: brains/03_personal/*.md
+ - Tools: \`brain_write\` (append/overwrite), \`brain_read\`, \`brain_list\`, \`brain_search\` — BEVORZUGT für alles was lange gespeichert werden soll (Markdown, Obsidian-lesbar und schnell). Aliase: 1=general, 2=business, 3=personal.
+ - Legacy JSON memory: tools \`remember\`/\`recall\`/\`forget\`/\`list_memory\` (categories general/business) sind noch da — nutze sie nur für sehr kurze Key-Value Fakten (gmail, token). Für alles mit Kontext nimm die 3 Brains.
+ - When the user says "merke dir" / "remember" / "speichere" — entscheide: Business-Kontext → brain_write business, Personal-Kontext (Vorlieben, privat) → personal, sonst general. Immer SOFORT speichern, nicht nur sagen dass du es tust.
+ - When you need a fact, search FIRST: brain_search in relevant brain, dann recall. Never guess what you stored.
+ - If the user asks "was weißt du über mich" → brain_list all + brain_search + list_memory, dann zusammenfassen. Business Mode default ist brain 2, sonst brain 1.
 
 Business Partner Mode:
  - When a turn is prefixed with "[BUSINESS MODE ACTIVE]" you are not JARVIS the butler — you are the user's business partner. Tone: direct, strategic, co-founder energy. No "sir", no butler register. You challenge, prioritize, and move fast.
@@ -485,8 +489,23 @@ OS-Steuerung — Du hast volle Kontrolle über das OS + jede Desktop-App:
  - Vision: capture_screen gibt dir das Bild (base64 + Pfad, downsized 1280px). Sende visuelle Prompts (Screenshot + Anweisung) an das LLM — du selbst bist das LLM, du rechnest die Koordinaten.
  - Dateien hochladen: upload_file(file_path) erwartet absoluten Pfad, z.B. C:/Users/moser/Dokumente/file.pdf — tippt den Pfad in den offenen File-Dialog.
  - Sandbox: Voll isoliert via Hidden-Desktop (CreateDesktop) — User kann live weiterarbeiten. Sandbox AN ist default, mit sandbox_mode toggeln. Jede Aktion loggt "[Sandbox]" und streamt Live-Bild in SandboxView.
- - GUI friert nie ein: Tools laufen async im Bridge-Worker, Logs via os_log + sandbox_image non-blocking.
- - Für Browser-Aufgaben bevorzuge chrome_* Tools wenn es um Web geht (schneller), nutze OS-Tools nur wenn du wirklich Desktop klicken musst.`
+  - GUI friert nie ein: Tools laufen async im Bridge-Worker, Logs via os_log + sandbox_image non-blocking.
+  - Für Browser-Aufgaben bevorzuge chrome_* Tools wenn es um Web geht (schneller), nutze OS-Tools nur wenn du wirklich Desktop klicken musst.
+
+PROAKTIV: Wenn in deinem Prompt ein Block "PROAKTIVE BRIEFING" steht, sprich ihn beim nächsten Hey Jarvis unaufgefordert an — das ist dein Tagesbriefing + Offerte-Follow-up.`
+
+function proactiveExtra() {
+  try {
+    const p = join(homedir(), 'Projekte', 'jarvis_v7', 'brains', '02_business', '_briefing.md')
+    const alt = join(process.cwd(), 'brains', '02_business', '_briefing.md')
+    const file = existsSync(p) ? p : (existsSync(alt) ? alt : '')
+    if (!file) return ''
+    const s = statSync(file)
+    if (Date.now() - s.mtimeMs > 24*3600*1000) return ''
+    const txt = readFileSync(file, 'utf8').slice(0, 2000)
+    return `\n\nPROAKTIVE BRIEFING (heute, lies beim nächsten Hey Jarvis vor wenn relevant):\n${txt}\n`
+  } catch { return '' }
+}
 
 /**
  * ElevenLabs credentials, borrowed from the MCP server config.
@@ -917,19 +936,18 @@ const handleRequest = async (req, res) => {
           // 22kHz mono is half the bytes of 44kHz and indistinguishable through
           // a laptop speaker; optimize_streaming_latency=3 trades a little
           // prosody for a much earlier first byte.
-          `?output_format=mp3_22050_32&optimize_streaming_latency=3`,
+          `?output_format=mp3_22050_32&optimize_streaming_latency=4`,
         {
           method: 'POST',
           headers: { 'xi-api-key': key, 'content-type': 'application/json' },
           body: JSON.stringify({
             text,
-            // Flash is the low-latency model — a conversation needs speed more
-            // than it needs the last few percent of quality.
+            // Flash v2.5 + latency 4 = schnellster Start; speed 1.1 spart ~10% Audio-Dauer
             model_id: 'eleven_flash_v2_5',
             voice_settings: {
-              stability: 0.4,
+              stability: 0.35,
               similarity_boost: 0.75,
-              speed: 1.05,
+              speed: 1.1,
             },
           }),
         },
@@ -1289,6 +1307,7 @@ wss.on('connection', (socket) => {
         ),
         jarvis_fs: filesystemServer(),
         jarvis_business: businessServer(),
+        jarvis_brains: brainsServer(),
         // The user's own Chrome, over the extension's native-host socket. It
         // holds no per-connection state, but it is built here with the rest so
         // the write gate is read once, at the same point as everything else.
@@ -1300,9 +1319,10 @@ wss.on('connection', (socket) => {
       // tuned for a coding agent — verbose, file-oriented, and a large chunk
       // of input tokens on every turn. Replacing it makes the persona stick,
       // keeps answers short enough to speak, and cuts cost per turn.
-      systemPrompt: SYSTEM_PROMPT,
-      // Run from the home directory so project-scoped MCP servers don't shadow
-      // the global ones, and so file tools have a sane root.
+      systemPrompt: SYSTEM_PROMPT + proactiveExtra(),
+      // Proaktiv: Tagesbriefing + Offerte-Follow-up aus brains/02_business/_briefing.md
+      // Wird beim Connect gelesen — wenn <24h alt, wird es dem System-Prompt angehängt,
+      // damit JARVIS beim ersten "Hey Jarvis" direkt proaktiv dran erinnert.
       cwd: homedir(),
       // No filesystem settings at all. Left to its default the SDK loads
       // ~/.claude/settings.json and settings.local.json exactly as the CLI
@@ -1327,7 +1347,7 @@ wss.on('connection', (socket) => {
       // without this line nothing in the project has a say at all.
       model: MODEL,
       ...(INCLUDE_EFFORT ? { effort: EFFORT } : {}),
-      maxTurns: 24,
+      maxTurns: 32,
       permissionMode: 'default',
       // Without this the SDK only emits whole assistant messages, and JARVIS
       // would sit silent until the entire answer was written. Partial events

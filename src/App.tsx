@@ -1007,6 +1007,23 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // TAP button — gleiche Logik wie Space
+  useEffect(() => {
+    const tap = () => {
+      const phase = store.getState().phase
+      if (phase === 'offline') void powerOn()
+      else if (phase === 'boot') return
+      else if (phase === 'thinking' || phase === 'tooling' || phase === 'speaking') {
+        onSpeechStart()
+        listen(AWAIT_SPEECH_MS)
+      } else {
+        onWake('')
+      }
+    }
+    ;(window as unknown as { __jarvisTap?: () => void }).__jarvisTap = tap
+    return () => { delete (window as unknown as { __jarvisTap?: () => void }).__jarvisTap }
+  }, [])
+
   return (
     <>
       <Scene />

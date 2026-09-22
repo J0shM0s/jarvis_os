@@ -1,6 +1,6 @@
 {
-  "exportedAt": "2026-09-22T07:39:39.010Z",
-  "count": 11,
+  "exportedAt": "2026-09-22T07:52:36.967Z",
+  "count": 13,
   "brains": [
     {
       "path": "01_general/inbox.md",
@@ -39,10 +39,22 @@
       "mtime": "2026-09-22T07:32:49.995Z"
     },
     {
+      "path": "02_business/_briefing.md",
+      "content": "# Tagesbriefing 2026-09-22\n\n> Auto-generiert proaktiv — JARVIS liest das beim nächsten Start\n\n## Business — Winterthur\n- Offerten: 2 geschickt — kein Follow-up überfällig (letztes Update vor 0 Tag(en))\n- Inbox: - **Was:** AI Websites für Businesses verkaufen die noch keine Website haben | - **Region:** Winterthur, Schweiz | - **Status:** 2 Offerten geschickt (Stand 2026-09-22)\n\n## To-do heute\n- [ ] Offerte 1 + 2 Follow-up (Anruf/Mail)\n- [ ] 1 neuen Betrieb ohne Website in Winterthur finden\n- [ ] Gym von zuhause: 15 Min Session\n\n## Personal\n- Fokus: Unihockey + KI/IT — 2026-09-22 als guter Tag nutzen\n",
+      "size": 607,
+      "mtime": "2026-09-22T07:40:04.387Z"
+    },
+    {
       "path": "02_business/_index.md",
       "content": "# Brain 2 — Business\n\n> Alles was JARVIS über dein Business speichert.\n\n## Was hierher gehört\n- Kunden, Leads, Deals, Angebote\n- Strategien, Ideen, Ziele, Finanzen\n- Projekte, SOPs, Notizen zu Firma\n\n## Struktur\n- `inbox.md` — Business Quick Capture\n- `kunden/` — pro Kunde eine Datei (optional)\n- `projekte/` — pro Projekt eine Datei\n- `finanzen.md` — Einnahmen/Ausgaben\n\n## Tags\n#business\n\n## Verknüpfung\n- MCP: `jarvis_memory` category `business` + `jarvis_business` (JSON) sind gespiegelt, aber dieses Folder-Brain ist das führende (Markdown, Obsidian-lesbar).\n",
       "size": 565,
       "mtime": "2026-09-22T06:41:45.434Z"
+    },
+    {
+      "path": "02_business/_voice.md",
+      "content": "Business ruhig, Sir — zwei Offerten draußen, heute einen neuen Betrieb ohne Website finden.",
+      "size": 91,
+      "mtime": "2026-09-22T07:40:04.390Z"
     },
     {
       "path": "03_personal/inbox.md",
