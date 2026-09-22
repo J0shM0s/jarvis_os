@@ -14,14 +14,24 @@ if (Test-Path "C:\nvm4w\nodejs\node.exe") { $nodeExe = "C:\nvm4w\nodejs\node.exe
 try { $found = Get-Command node -ErrorAction SilentlyContinue; if ($found) { $nodeExe = $found.Source } } catch {}
 $env:PATH = "C:\nvm4w\nodejs;$env:USERPROFILE\.local\bin;$env:PATH"
 
-# Falls Bridge schon laeuft (Port 8787), nichts neu starten - nur Browser oeffnen
+# Falls Bridge UND Vite schon laufen, nichts neu starten - nur Browser oeffnen
+$bridgeUp = $false
+$viteUp = $false
 try {
-  $tcp = New-Object System.Net.Sockets.TcpClient
-  $ar = $tcp.BeginConnect("127.0.0.1",8787,$null,$null)
-  $wait = $ar.AsyncWaitHandle.WaitOne(800,$false)
-  if ($wait -and $tcp.Connected) { $tcp.Close(); Start-Process "http://localhost:5173" -ErrorAction SilentlyContinue; $mutex.ReleaseMutex(); exit }
-  $tcp.Close()
+  $t1 = New-Object System.Net.Sockets.TcpClient
+  $a1 = $t1.BeginConnect("127.0.0.1",8787,$null,$null)
+  $w1 = $a1.AsyncWaitHandle.WaitOne(600,$false)
+  if ($w1 -and $t1.Connected) { $bridgeUp = $true }
+  $t1.Close()
 } catch {}
+try {
+  $t2 = New-Object System.Net.Sockets.TcpClient
+  $a2 = $t2.BeginConnect("127.0.0.1",5173,$null,$null)
+  $w2 = $a2.AsyncWaitHandle.WaitOne(600,$false)
+  if ($w2 -and $t2.Connected) { $viteUp = $true }
+  $t2.Close()
+} catch {}
+if ($bridgeUp -and $viteUp) { Start-Process "http://localhost:5173" -ErrorAction SilentlyContinue; $mutex.ReleaseMutex(); exit }
 
 # Env wie in start.bat
 $env:ANTHROPIC_BASE_URL = ""
@@ -74,11 +84,15 @@ $env:JARVIS_ALLOW_WRITES = "1"
 $env:MCP_TOOL_TIMEOUT = "90000"
 $env:MCP_TIMEOUT = "30000"
 
-# Bridge + Vite als Hidden-Prozesse
-Start-Process -FilePath $nodeExe -ArgumentList "bridge/server.mjs" -WindowStyle Hidden -RedirectStandardOutput "$root\bridge-writes.out.log" -RedirectStandardError "$root\bridge-writes.out.log" -WorkingDirectory $root
-Start-Sleep -Seconds 3
-Start-Process -FilePath $nodeExe -ArgumentList "node_modules/vite/bin/vite.js" -WindowStyle Hidden -RedirectStandardOutput "$root\dev.out.log" -RedirectStandardError "$root\dev.out.log" -WorkingDirectory $root
-Start-Sleep -Seconds 5
+# Bridge + Vite als Hidden-Prozesse (nur starten wenn Port frei)
+if (-not $bridgeUp) {
+  Start-Process -FilePath $nodeExe -ArgumentList "bridge/server.mjs" -WindowStyle Hidden -RedirectStandardOutput "$root\bridge-writes.out.log" -RedirectStandardError "$root\bridge-err.log" -WorkingDirectory $root
+  Start-Sleep -Seconds 3
+} else { Start-Sleep -Seconds 1 }
+if (-not $viteUp) {
+  Start-Process -FilePath $nodeExe -ArgumentList "node_modules/vite/bin/vite.js" -WindowStyle Hidden -RedirectStandardOutput "$root\dev.out.log" -RedirectStandardError "$root\dev-err.log" -WorkingDirectory $root
+  Start-Sleep -Seconds 5
+} else { Start-Sleep -Seconds 1 }
 
 # Browser oeffnen
 $edge = $null
