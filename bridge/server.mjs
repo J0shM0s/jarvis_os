@@ -81,7 +81,6 @@ const isDevPort = (port) =>
   (port >= 5173 && port <= 5199) || (port >= 4173 && port <= 4199)
 
 function originAllowed(origin) {
-  // Electron file:// und null-Origin (Desktop-App) erlauben — das ist die gepackte App, kein fremder Tab
   if (!origin || origin === 'null') return true
   if (origin.startsWith('file://')) return true
   if (EXTRA_ORIGINS.has(origin.replace(/\/+$/, ''))) return true
@@ -94,9 +93,9 @@ function originAllowed(origin) {
   if (url.protocol === 'file:') return true
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
   if (!LOCAL_HOSTS.has(url.hostname)) return false
-  // file:// im Electron hat keinen Port — schon oben erlaubt; hier nur http(s)
   if (!url.port) return true
-  return isDevPort(Number(url.port))
+  // Jeder localhost Port erlaubt — Vite wählt freien Port, Electron nutzt file://, alles lokal ist ok
+  return true
 }
 
 /**
@@ -1225,6 +1224,20 @@ const wss = new WebSocketServer({
 })
 server.listen(PORT)
 
+// Heartbeat: alle 30s pingen, tote Sockets terminieren — verhindert "connection lost" durch halb-offene Sockets
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    // @ts-ignore isAlive custom
+    if (ws.isAlive === false) {
+      try { ws.terminate() } catch {}
+      return
+    }
+    // @ts-ignore
+    ws.isAlive = false
+    try { ws.ping() } catch {}
+  })
+}, 30000)
+
 console.log(`[jarvis] bridge listening on ws://localhost:${PORT}`)
 console.log(
   `[jarvis] speech ${elevenKey() ? 'via ElevenLabs (key from MCP config)' : 'using browser fallback voice'}`,
@@ -1265,6 +1278,10 @@ const RESULT_FAILURES = {
 }
 
 wss.on('connection', (socket) => {
+  // @ts-ignore
+  socket.isAlive = true
+  // @ts-ignore
+  socket.on('pong', () => { socket.isAlive = true })
   console.log('[jarvis] client connected')
 
   // Answer the HUD straight away rather than making it wait for the agent's

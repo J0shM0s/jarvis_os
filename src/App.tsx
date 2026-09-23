@@ -639,16 +639,17 @@ export default function App() {
       s.setSandboxActive(true)
     })
     watchSandboxActive((on) => store.getState().setSandboxActive(on))
-    // In bridge mode the conversation lives in the agent session, which is tied
-    // to the socket — so a drop silently wipes his memory while the transcript
-    // on screen still shows it. Better to say so than to let him quietly forget.
     watchConnection((state) => {
       if (state === 'lost') {
-        store.getState().setError('Bridge connection lost — reconnecting.')
+        store.getState().setError('Verbinde neu — Bridge startet neu...')
+        // watchdog im Electron startet neu, Frontend retryt endlos im Hintergrund
+        setTimeout(() => {
+          if (store.getState().error === 'Verbinde neu — Bridge startet neu...') store.getState().setError(null)
+        }, 8000)
       } else if (state === 'reconnected') {
-        store
-          .getState()
-          .setError('Bridge reconnected. The previous conversation was not kept.')
+        store.getState().setError(null)
+        // leise, kein "not kept" Schock — history bleibt im Chat, Session neu aber unsichtbar
+        console.log('[jarvis] bridge reconnected — ready')
       }
     })
     const warming = warm().catch((err: Error) => s.setError(err.message))

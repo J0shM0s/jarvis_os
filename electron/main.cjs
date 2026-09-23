@@ -141,6 +141,28 @@ async function startBrains() {
   } catch (e) { logMain('startBrains error: ' + (e.stack||e)); }
 }
 
+let bridgeWatchdog = null
+function startWatchdog() {
+  if (bridgeWatchdog) return
+  bridgeWatchdog = setInterval(async () => {
+    try {
+      const up = await checkPort(8787, 1500)
+      if (!up) {
+        logMain('watchdog: bridge 8787 down — restarting')
+        try { await startBridge(true) } catch {}
+        // auch proxy check
+        const proxyPort = Number(process.env.BRAIN_PROXY_PORT || 8790)
+        const proxyUp = await checkPort(proxyPort, 1000)
+        if (!proxyUp && process.env.OPENROUTER_API_KEY) {
+          logMain('watchdog: proxy down — restarting')
+          const p = path.join(UNPACKED_ROOT, 'brain-proxy.mjs')
+          if (fs.existsSync(p)) hiddenSpawn(nodeBin(), [p], { BRAIN_PROXY_PORT: String(proxyPort), OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY, OPENROUTER_MODEL: process.env.OPENROUTER_MODEL, BRAIN_PRIORITY: process.env.BRAIN_PRIORITY })
+        }
+      }
+    } catch {}
+  }, 8000)
+}
+
 async function startBridge(withProxy) {
   try {
     if (await checkPort(8787)) { logMain('bridge already up — skip startBridge'); return; }
@@ -158,7 +180,12 @@ async function startBridge(withProxy) {
     }
     const b = path.join(UNPACKED_ROOT, 'bridge/server.mjs');
     if (!fs.existsSync(b)) logMain('bridge/server.mjs missing at ' + b);
-    hiddenSpawn(nodeBin(), [b], env);
+    const child = hiddenSpawn(nodeBin(), [b], env)
+    if (child) {
+      child.on('exit', (code, sig) => {
+        logMain(`bridge exit code=${code} sig=${sig} — will restart via watchdog`)
+      })
+    }
   } catch (e) { logMain('startBridge error: ' + (e.stack||e)); }
 }
 
@@ -286,6 +313,7 @@ app.whenReady().then(async () => {
   try { await startViteIfDev(); } catch {}
   try { createWindow(); } catch (e) { logMain('createWindow outer ' + e.stack); }
   try { createTray(); } catch {}
+  try { startWatchdog(); } catch {}
   app.on('activate', () => { try { if (BrowserWindow.getAllWindows().length === 0) createWindow(); else win.show(); } catch {} });
 });
 

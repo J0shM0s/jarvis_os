@@ -155,16 +155,13 @@ let firstReady = deferred()
 
 let everConnected = false
 
-/** Backoff for the automatic re-dial. It gives up after the last delay rather
- *  than retrying forever — a bridge that has been down for half a minute is
- *  usually one you stopped on purpose, and the next ask() re-dials anyway. */
-const RECONNECT_DELAYS = [500, 1000, 2000, 4000, 8000, 8000]
+/** Backoff — now endlos, capped at 8s. Nie mehr "aufgegeben" nach 30s. */
+const RECONNECT_DELAYS = [500, 1000, 2000, 4000, 8000]
 let attempt = 0
 let reconnectTimer = 0
 
 function scheduleReconnect() {
-  if (attempt >= RECONNECT_DELAYS.length) return
-  const delay = RECONNECT_DELAYS[attempt]
+  const delay = attempt < RECONNECT_DELAYS.length ? RECONNECT_DELAYS[attempt] : 8000
   attempt += 1
   clearTimeout(reconnectTimer)
   reconnectTimer = window.setTimeout(() => {
@@ -263,8 +260,10 @@ function connect(): Promise<WebSocket> {
 
     const timer = setTimeout(() => {
       ws.close()
-      settle(new Error('Bridge not responding — is `npm run bridge` running?'))
-    }, 6000)
+      // kein harter Fehler — watchdog startet Bridge neu, wir retryen leise
+      console.warn('[bridge] connect timeout — retrying...')
+      settle(new Error('Bridge wird gestartet — verbinde neu...'))
+    }, 12000)
 
     ws.onopen = () => {
       socket = ws
