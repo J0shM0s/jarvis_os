@@ -230,6 +230,32 @@ export function Hud() {
               answers itself before it becomes a bug report. */}
           {micMuted && <span className="quota low">MIC MUTED</span>}
           {businessMode && <span className="quota" style={{ background: '#f0a93c', color: '#000', padding: '2px 6px', borderRadius: 4 }}>BUSINESS</span>}
+          <button
+            onClick={() => {
+              const s = useStore.getState()
+              if (s.workOpen) {
+                if (s.workMinimized) s.setWorkMinimized(false)
+                else s.setWorkOpen(false)
+              } else {
+                s.setWorkOpen(true)
+                s.setWorkMinimized(false)
+              }
+            }}
+            style={{
+              marginLeft: 8,
+              padding: '2px 8px',
+              fontSize: 9,
+              letterSpacing: '0.14em',
+              border: '1px solid color-mix(in srgb, var(--accent) 32%, transparent)',
+              background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+              color: 'var(--accent)',
+              cursor: 'pointer',
+              pointerEvents: 'auto',
+            }}
+            title="Work Window togglen (W)"
+          >
+            WORK
+          </button>
         </div>
       </header>
 

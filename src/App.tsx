@@ -826,6 +826,25 @@ export default function App() {
     pump()
 
     const onKey = (e: KeyboardEvent) => {
+      // W immer — Work Window (auch wenn Input fokussiert, außer Tippen im Composer)
+      if ((e.key === 'w' || e.key === 'W') && !e.repeat && !e.metaKey && !e.ctrlKey) {
+        const tTag = (e.target as HTMLElement | null)?.tagName
+        const isTyping = tTag === 'INPUT' || tTag === 'TEXTAREA' || (e.target as HTMLElement | null)?.isContentEditable
+        const composerOpen = store.getState().composerOpen
+        if (!(isTyping && composerOpen)) {
+          e.preventDefault()
+          const st = store.getState()
+          if (st.workOpen) {
+            if (st.workMinimized) st.setWorkMinimized(false)
+            else st.setWorkOpen(false)
+          } else {
+            st.setWorkOpen(true)
+            st.setWorkMinimized(false)
+          }
+          sfx.play('done')
+          return
+        }
+      }
       // Focused interactive controls own the keyboard: the global shortcuts
       // preventDefault, which would swallow a blade button's native Enter
       // activation and stop typing/selecting inside form fields entirely.
@@ -1024,21 +1043,6 @@ export default function App() {
       if ((e.key === 'o' || e.key === 'O') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault()
         store.getState().clearOsLogs()
-        sfx.play('done')
-        return
-      }
-
-      // W toggles Work Window — CEO Arbeitsablauf (Denken, Verteilen, Sub-Agenten)
-      if ((e.key === 'w' || e.key === 'W') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault()
-        const st = store.getState()
-        if (st.workOpen) {
-          if (st.workMinimized) st.setWorkMinimized(false)
-          else st.setWorkOpen(false)
-        } else {
-          st.setWorkOpen(true)
-          st.setWorkMinimized(false)
-        }
         sfx.play('done')
         return
       }
