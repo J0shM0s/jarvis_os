@@ -38,6 +38,8 @@ type Frame = {
   log?: string
   data?: string
   active?: boolean
+  costUsd?: number
+  durationMs?: number
 }
 
 /** Every question gets an id so its answer can be told from anyone else's. */
@@ -339,7 +341,7 @@ export async function ask(
   prompt: string,
   handlers: AskHandlers,
   opts: { businessMode?: boolean } = {},
-): Promise<{ text: string; tools: string[] }> {
+): Promise<{ text: string; tools: string[]; costUsd?: number; durationMs?: number }> {
   /**
    * A new question supersedes the one in flight.
    *
@@ -390,6 +392,9 @@ export async function ask(
   const id = `a${++askSeq}`
   const tools: string[] = []
   let text = ''
+  let costUsd: number | undefined
+  let durationMs: number | undefined
+  const turnStartedAt = Date.now()
 
   return new Promise((resolve, reject) => {
     let done = false
@@ -409,9 +414,8 @@ export async function ask(
     const finish = (fallback = '') => {
       if (done) return
       cleanup()
-      // Prefer the streamed text; fall back to the final result if this build
-      // didn't emit deltas.
-      resolve({ text: (text || fallback).trim(), tools })
+      if (!durationMs) durationMs = Date.now() - turnStartedAt
+      resolve({ text: (text || fallback).trim(), tools, costUsd, durationMs })
     }
 
     const fail = (err: Error) => {
@@ -474,6 +478,9 @@ export async function ask(
             break
 
           case 'done':
+            if (typeof msg.costUsd === 'number') costUsd = msg.costUsd
+            if (typeof msg.durationMs === 'number') durationMs = msg.durationMs
+            else durationMs = Date.now() - turnStartedAt
             finish(msg.text ?? '')
             break
 

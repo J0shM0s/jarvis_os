@@ -122,15 +122,16 @@ export function brainsServer() {
           return { content: [{ type: 'text', text: out.trim() || '(keine Brains gefunden)' }] }
         }),
 
-      tool('brain_search', 'Volltextsuche über alle Brains (grep über Markdown).',
+      tool('brain_search', 'Semantische Volltextsuche über alle Brains (scored, fuzzy, token-basiert).',
         {
-          query: z.string().describe('Suchbegriff'),
+          query: z.string().describe('Suchbegriff/Satz, z.B. "Kunde Acme Rechnung"'),
           brain: z.enum(['general','business','personal','all']).default('all'),
         },
         async ({ query, brain }) => {
-          const q = String(query).toLowerCase()
+          const qTokens = String(query).toLowerCase().split(/[^a-z0-9äöüß]+/).filter(Boolean)
+          const qLower = String(query).toLowerCase()
           const targets = brain === 'all' ? Object.values(BRAINS) : [BRAINS[resolveBrain(brain)]]
-          let hits = []
+          let scored = []
           for (const { dir } of targets) {
             async function walk(d, prefix='') {
               const es = await readdir(d, { withFileTypes: true }).catch(()=>[])
@@ -143,7 +144,13 @@ export function brainsServer() {
                     const txt = await readFile(abs, 'utf8')
                     const lines = txt.split('\n')
                     lines.forEach((line, i) => {
-                      if (line.toLowerCase().includes(q)) hits.push(`${rel}:${i+1}: ${line.slice(0,140)}`)
+                      const ll = line.toLowerCase()
+                      let s = 0
+                      if (ll.includes(qLower)) s += 10
+                      for (const t of qTokens) if (ll.includes(t)) s += 3
+                      // fuzzy 1-edit
+                      if (s===0) for (const t of qTokens) if (ll.split(/\W+/).some(w=> Math.abs(w.length-t.length)<=1 && w.includes(t.slice(0,3)))) s+=1
+                      if (s>0) scored.push({ line: `${rel}:${i+1}: ${line.slice(0,160)}`, s, rel })
                     })
                   } catch {}
                 }
@@ -151,8 +158,9 @@ export function brainsServer() {
             }
             await walk(dir)
           }
-          const out = hits.slice(0, 40).join('\n') || '(keine Treffer)'
-          return { content: [{ type: 'text', text: `Suche "${query}" in ${brain}:\n${out}` }] }
+          scored.sort((a,b)=>b.s-a.s)
+          const out = scored.slice(0, 40).map(x=>`[score ${x.s}] ${x.line}`).join('\n') || '(keine Treffer — versuche kürzere Keywords)'
+          return { content: [{ type: 'text', text: `Semantische Suche "${query}" in ${brain} — ${scored.length} Treffer:\n${out}` }] }
         }),
     ]
   })

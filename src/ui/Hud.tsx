@@ -11,6 +11,8 @@ import { GestureGuide } from './GestureGuide'
 import { OsLog } from './OsLog'
 import { SandboxView } from './SandboxView'
 import { WorkflowsBoard } from './WorkflowsBoard'
+import { WorkWindow } from './WorkWindow'
+import { CommandPalette } from './CommandPalette'
 
 const statusText: Record<Phase, string> = {
   offline: 'OFFLINE',
@@ -336,27 +338,14 @@ export function Hud() {
       <OsLog />
       <SandboxView />
       <WorkflowsBoard />
+      <WorkWindow />
+      <CommandPalette />
 
       {error && <div className="error">{error}</div>}
 
-      {/* TAP — großer Touch-Button, gleich wie Space */}
-      <button
-        className="tap-button"
-        aria-label="Tap to talk"
-        onPointerDown={(e) => {
-          e.preventDefault()
-          const fn = (window as unknown as { __jarvisTap?: () => void }).__jarvisTap
-          if (fn) fn()
-          else window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true }))
-        }}
-        onClick={(e) => e.preventDefault()}
-      >
-        <img src="/tap.svg" alt="TAP" width={96} height={96} draggable={false} />
-      </button>
-
       <footer className="hud-bottom">
         <span className="hint">
-          say <b>“hey jarvis”</b> · <kbd>Space</kbd> / TAP to talk · <kbd>T</kbd>/<kbd>↵</kbd> type · <kbd>M</kbd> mute · <kbd>S</kbd> sound · <kbd>G</kbd> hands · <kbd>B</kbd> {businessMode ? 'business ✓' : 'business'} · <kbd>O</kbd> clear OS log
+          say <b>“hey jarvis”</b> · <kbd>Space</kbd> to talk · <kbd>T</kbd>/<kbd>↵</kbd> type · <kbd>M</kbd> mute · <kbd>S</kbd> sound · <kbd>G</kbd> hands · <kbd>B</kbd> {businessMode ? 'business ✓' : 'business'} · <kbd>W</kbd> work · <kbd>O</kbd> clear OS log
           {voice && (
             <>
               {' · '}

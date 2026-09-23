@@ -1,7 +1,7 @@
 /**
  * JARVIS Desktop — Electron wrapper (robust)
  */
-const { app, BrowserWindow, Tray, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Tray, Menu, shell, dialog, ipcMain } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -9,6 +9,7 @@ const os = require('os');
 const http = require('http');
 
 let win = null;
+let workWin = null;
 let tray = null;
 const children = [];
 
@@ -166,6 +167,25 @@ async function startViteIfDev() {
   if (await checkPort(5173)) { logMain('vite 5173 already up'); return; }
   hiddenSpawn(nodeBin(), [path.join(ROOT, 'node_modules/vite/bin/vite.js')], {});
 }
+
+function createWorkWindow() {
+  try {
+    if (workWin && !workWin.isDestroyed()) { workWin.show(); workWin.focus(); return workWin; }
+    const url = isDev ? 'http://localhost:5173?work=1' : `file://${path.join(ROOT, 'dist/index.html')}?work=1`;
+    workWin = new BrowserWindow({
+      width: 900, height: 700, backgroundColor: '#01060c', title: 'JARVIS Workspace',
+      show: true, autoHideMenuBar: true,
+      webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
+    });
+    workWin.loadURL(url).catch(() => workWin.loadFile(path.join(ROOT, 'dist/index.html'), { query: { work: '1' } }));
+    workWin.on('closed', () => { workWin = null; });
+    logMain('workWindow opened ' + url);
+    return workWin;
+  } catch (e) { logMain('createWorkWindow failed ' + e.stack); return null; }
+}
+
+ipcMain.on('open-work-window', () => { try { createWorkWindow(); } catch {} });
+ipcMain.on('close-work-window', () => { try { if (workWin) workWin.close(); } catch {} });
 
 function createWindow() {
   try {

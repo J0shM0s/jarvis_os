@@ -26,8 +26,9 @@ import { osServer } from './os.mjs'
 import { filesystemServer } from './filesystem.mjs'
 import { businessServer } from './business.mjs'
 import { brainsServer } from './brains.mjs'
+import { ceoServer } from './ceo.mjs'
 import { homedir, tmpdir } from 'node:os'
-import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync, statSync, readdirSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve as resolvePath } from 'node:path'
 import { openRemote, proxyError, vetTarget, PROXY_UA } from './net.mjs'
@@ -303,6 +304,7 @@ function decideTool(name) {
     if (server === 'jarvis_fs') return true
     if (server === 'jarvis_business') return true
     if (server === 'jarvis_brains') return true
+    if (server === 'jarvis_ceo') return true
 
     const tool = mcpToolOf(name)
     if (EFFECTFUL_VERB.test(tool) && !VETO_EXEMPT.has(`${server}__${tool}`)) {
@@ -492,6 +494,21 @@ OS-Steuerung — Du hast volle Kontrolle über das OS + jede Desktop-App:
   - GUI friert nie ein: Tools laufen async im Bridge-Worker, Logs via os_log + sandbox_image non-blocking.
   - Für Browser-Aufgaben bevorzuge chrome_* Tools wenn es um Web geht (schneller), nutze OS-Tools nur wenn du wirklich Desktop klicken musst.
 
+CEO — Du bist der CEO, nicht der Arbeiter. Du planst NIE selbst — du lässt planen.
+ - Ebene 0: Du (JARVIS CEO) — nur 1 Job: Erteile Planungsauftrag an Planner-Sub-Agent (via Task tool). Du zerteilst NICHT selbst, du fasst nur am Ende zusammen.
+ - Ebene 1: PLANNER (via Task) — EIN Sub-Agent bekommt: "Du bist Planner. Analysiere Task, mache TodoWrite (3-5 Subtasks), prüfe je Subtask ceo_auto_route/ceo_list_skills + ceo_read_skill, überdenke, dann verteile via ceo_delegate/ceo_spawn_team + Task calls an Worker. Du bist der Verteiler, nicht der Arbeiter." Planner überdenkt (2. Durchgang: "Ist Plan vollständig? Fehlt Skill?") bevor er verteilt.
+ - Ebene 2: WORKER (via Task vom Planner) — bekommen je EINE Teilaufgabe + Skill + Kontext. Sie arbeiten, nutzen cache (ceo_cache), melden Ergebnis via ceo_complete_task. Dürfen selbst wieder via Task an Ebene 3 delegieren wenn Teilaufgabe zu groß.
+ - Ebene 3+: SUB-SUB (via Task vom Worker) — für Unter-Teilaufgaben, gleiches Muster. Tiefe max 3, dann selbst ausführen.
+ - Pflicht-Ablauf für JEDE Aufgabe >1 Schritt: 1) CEO → Task "Planner: plane ..." (kein TodoWrite selbst!), 2) Planner macht TodoWrite + Skill-Check + Überdenken, 3) Planner ruft ceo_spawn_team + parallele Task calls, 4) Worker → Critic (\`ceo_critic_review\`) → CEO Synthese.
+ - Guard: CEO darf NIE direkt ceo_delegate/ceo_spawn_team ohne vorherigen Planner-Task. Worker darf NIE ohne TodoWrite des Planners starten. Bei Verstoß: erst Planner nachholen.
+ - Regel: Alles was ein Skill kann, MUSS via Skill laufen — Planner prüft Skills, Worker befolgt SKILL.md.
+ - Parallele Teams: Planner nutzt ceo_spawn_team (max 3 parallel, Rest queued), dann Task calls. CEO wartet, sammelt, fasst in 2 Sätzen zusammen (Details auf Blade).
+ - Automatisch: Planner wählt via ceo_auto_route: Browser→browser-skill, Voice→voicestudio, Office→univer-*, SEO→marketingskills/seo, Bild→higgsfield-generate, Training→AI-Research-Skills, Text→humanizer.
+ - Reporting: Planner prüft via ceo_task_tree, Worker melden ceo_complete_task, Critic via ceo_critic_review, CEO nur Synthese.
+ - Niemals selbst arbeiten — du bist teuer, Planner + Worker sind billig und parallel.
+
+SKILL-AUTO: Du hast 140+ Skills unter ~/.agents/skills/. AUTO-TRIGGER: Bei JEDER Nutzeranfrage erst ceo_list_skills mit 2-3 Queries (z.B. "browser", "seo", "voice"), triff Match → ceo_read_skill → befolge SKILL.md exakt. Übergehe keinen Skill — Skills sind deine SOPs. Wenn mehrere passen, rufe sie nacheinander auf bzw. delegiere je Skill an eigenen Sub-Agenten.
+
 PROAKTIV: Wenn in deinem Prompt ein Block "PROAKTIVE BRIEFING" steht, sprich ihn beim nächsten Hey Jarvis unaufgefordert an — das ist dein Tagesbriefing + Offerte-Follow-up.`
 
 function proactiveExtra() {
@@ -504,6 +521,34 @@ function proactiveExtra() {
     if (Date.now() - s.mtimeMs > 24*3600*1000) return ''
     const txt = readFileSync(file, 'utf8').slice(0, 2000)
     return `\n\nPROAKTIVE BRIEFING (heute, lies beim nächsten Hey Jarvis vor wenn relevant):\n${txt}\n`
+  } catch { return '' }
+}
+
+let _skillCatalogCache = { mtime: 0, text: '' }
+function skillCatalogExtra() {
+  try {
+    const d = join(homedir(), '.agents', 'skills')
+    if (!existsSync(d)) return ''
+    const st = statSync(d)
+    if (_skillCatalogCache.text && st.mtimeMs === _skillCatalogCache.mtime) return _skillCatalogCache.text
+    const ents = readdirSync(d, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name).sort()
+    const cats = {
+      'Voice/Audio': ents.filter(n => /voice|whisper|audio/i.test(n)),
+      'Browser': ents.filter(n => /browser|chrome/i.test(n)),
+      'Office': ents.filter(n => /univer/i.test(n)),
+      'SEO': ents.filter(n => /seo|keyword|serp|traffic|schema|link|cannib/i.test(n)),
+      'Image/Video': ents.filter(n => /image|humanizer|higgs|generate/i.test(n)),
+      'Research/Training': ents.filter(n => /ara|axolotl|peft|llama|deepspeed|ray|training|rl|dspy|chroma|faiss|mlflow|vllm|sglang/i.test(n)),
+    }
+    let out = `\n\nAKTIVER SKILL-KATALOG (140 Skills, nutze ceo_list_skills + ceo_auto_route + ceo_read_skill für Details):\n`
+    for (const [cat, list] of Object.entries(cats)) {
+      if (list.length) out += `${cat}: ${list.join(', ')}\n`
+    }
+    const rest = ents.filter(n => !Object.values(cats).flat().includes(n))
+    if (rest.length) out += `Weitere: ${rest.slice(0, 30).join(', ')}${rest.length > 30 ? ' ...' : ''}\n`
+    out += `Regel: Immer ceo_auto_route oder ceo_list_skills query="<keyword>" vor Delegation, dann ceo_read_skill. Bei Score <5 ohne Skill arbeiten.\n`
+    _skillCatalogCache = { mtime: st.mtimeMs, text: out }
+    return out
   } catch { return '' }
 }
 
@@ -774,6 +819,96 @@ const handleRequest = async (req, res) => {
     }
     res.writeHead(200, { ...cors, 'content-type': 'application/json' })
     return res.end(JSON.stringify(body))
+  }
+
+  if (req.method === 'GET' && req.url?.startsWith('/ceo/tree')) {
+    try {
+      const p = join(homedir(), '.jarvis', 'ceo', 'task_tree.json')
+      if (!existsSync(p)) {
+        res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ nodes: [], root: null }))
+      }
+      const txt = readFileSync(p, 'utf8')
+      res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+      return res.end(txt)
+    } catch (e) {
+      res.writeHead(500, cors)
+      return res.end(JSON.stringify({ error: String(e.message) }))
+    }
+  }
+
+  if (req.method === 'GET' && req.url?.startsWith('/ceo/skills')) {
+    try {
+      const q = new URL(req.url, 'http://x').searchParams.get('q') || ''
+      const dir = join(homedir(), '.agents', 'skills')
+      const ents = existsSync(dir) ? readdirSync(dir, { withFileTypes: true }).filter(e=>e.isDirectory()).map(e=>e.name) : []
+      res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ total: ents.length, skills: ents.slice(0, 200), query: q }))
+    } catch (e) {
+      res.writeHead(500, cors)
+      return res.end(JSON.stringify({ error: String(e.message) }))
+    }
+  }
+
+  if (req.method === 'GET' && req.url === '/ceo/history') {
+    try {
+      const dir = join(homedir(), '.jarvis', 'ceo', 'history')
+      if (!existsSync(dir)) {
+        res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+        return res.end(JSON.stringify([]))
+      }
+      const files = readdirSync(dir).filter(f=>f.endsWith('.json')).sort().reverse().slice(0, 20)
+      const out = []
+      for (const f of files) {
+        try {
+          const txt = readFileSync(join(dir, f), 'utf8')
+          const j = JSON.parse(txt)
+          out.push({ id: j.id, task: j.task, at: j.at, costUsd: j.costUsd, durationMs: j.durationMs, tools: j.tools?.slice(0,5), answerLen: j.answer?.length||0 })
+        } catch {}
+      }
+      res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+      return res.end(JSON.stringify(out))
+    } catch (e) {
+      res.writeHead(500, cors)
+      return res.end(JSON.stringify({ error: String(e.message) }))
+    }
+  }
+
+  if (req.method === 'POST' && req.url === '/ceo/history') {
+    try {
+      let body = ''
+      for await (const chunk of req) { body += chunk; if (body.length > 200*1024) break }
+      const data = JSON.parse(body || '{}')
+      if (!data.task || !data.id) throw new Error('need id+task')
+      const dir = join(homedir(), '.jarvis', 'ceo', 'history')
+      try { mkdirSync(dir, { recursive: true }) } catch {}
+      const file = join(dir, `${new Date().toISOString().slice(0,10)}_${data.id}.json`)
+      writeFileSync(file, JSON.stringify({ ...data, savedAt: new Date().toISOString() }, null, 2), 'utf8')
+      try {
+        const files = readdirSync(dir).filter(f=>f.endsWith('.json')).sort()
+        if (files.length > 50) files.slice(0, files.length-50).forEach(f=>{ try { unlinkSync(join(dir,f)) } catch {} })
+      } catch {}
+      res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ ok: true, file }))
+    } catch (e) {
+      res.writeHead(400, cors)
+      return res.end(JSON.stringify({ error: String(e.message) }))
+    }
+  }
+
+  if (req.method === 'GET' && req.url === '/proactive/briefing') {
+    try {
+      const txt = proactiveExtra()
+      if (!txt) {
+        res.writeHead(204, cors)
+        return res.end()
+      }
+      res.writeHead(200, { ...cors, 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ briefing: txt.slice(0,3000), at: new Date().toISOString() }))
+    } catch (e) {
+      res.writeHead(500, cors)
+      return res.end(JSON.stringify({ error: String(e.message) }))
+    }
   }
 
   // Serve local image files to the page. Screenshots and generated art land on
@@ -1174,6 +1309,7 @@ wss.on('connection', (socket) => {
    * listener over there has already heard.
    */
   let answering = null
+  let turnStartedAt = 0
   const sendTurn = (msg) => send({ ...msg, ask: answering })
 
   /**
@@ -1308,6 +1444,7 @@ wss.on('connection', (socket) => {
         jarvis_fs: filesystemServer(),
         jarvis_business: businessServer(),
         jarvis_brains: brainsServer(),
+        jarvis_ceo: ceoServer(),
         // The user's own Chrome, over the extension's native-host socket. It
         // holds no per-connection state, but it is built here with the rest so
         // the write gate is read once, at the same point as everything else.
@@ -1319,7 +1456,7 @@ wss.on('connection', (socket) => {
       // tuned for a coding agent — verbose, file-oriented, and a large chunk
       // of input tokens on every turn. Replacing it makes the persona stick,
       // keeps answers short enough to speak, and cuts cost per turn.
-      systemPrompt: SYSTEM_PROMPT + proactiveExtra(),
+      systemPrompt: SYSTEM_PROMPT + proactiveExtra() + skillCatalogExtra(),
       // Proaktiv: Tagesbriefing + Offerte-Follow-up aus brains/02_business/_briefing.md
       // Wird beim Connect gelesen — wenn <24h alt, wird es dem System-Prompt angehängt,
       // damit JARVIS beim ersten "Hey Jarvis" direkt proaktiv dran erinnert.
@@ -1347,7 +1484,7 @@ wss.on('connection', (socket) => {
       // without this line nothing in the project has a say at all.
       model: MODEL,
       ...(INCLUDE_EFFORT ? { effort: EFFORT } : {}),
-      maxTurns: 32,
+      maxTurns: 64,
       permissionMode: 'default',
       // Without this the SDK only emits whole assistant messages, and JARVIS
       // would sit silent until the entire answer was written. Partial events
@@ -1362,15 +1499,25 @@ wss.on('connection', (socket) => {
       // through a `Bash: echo hello` without asking, and only reaches us for
       // something with a consequence, like a `touch`. So a deny here is
       // reliable; an absence of a call here is not proof nothing ran.
-      canUseTool: async (toolName) => {
+      canUseTool: async (toolName, input) => {
+        // Per-Agent Allowlist: gefährliche Bash-Kommandos immer prüfen, auch wenn ALLOW_WRITES=1
+        if (toolName === 'Bash' && input && typeof input.command === 'string') {
+          const cmd = input.command.toLowerCase()
+          const dangerous = /(rm\s+-rf|mkfs|shutdown|reboot|format\s+[a-z]:|del\s+\/[fq]|sudo\s+rm|:\(\)\s*\{)/i
+          if (dangerous.test(cmd)) {
+            console.warn(`[jarvis] blocked dangerous Bash: ${input.command.slice(0,80)}`)
+            return {
+              behavior: 'deny',
+              message: 'Blocked: dangerous command requires explicit confirmation. Ask user to confirm with "ja, führe aus" and retry.',
+            }
+          }
+        }
         const ok = decideTool(toolName)
         console.log(`[jarvis] tool ${toolName} -> ${ok ? 'allow' : 'deny'}`)
         return ok
           ? { behavior: 'allow' }
           : {
               behavior: 'deny',
-              // Every word of this can end up spoken, so it carries no command
-              // to read out — the persona is forbidden from saying one aloud.
               message:
                 'Blocked: JARVIS is running in read-only mode and cannot take' +
                 ' actions that change anything. Tell the user this action is' +
@@ -1467,6 +1614,7 @@ wss.on('connection', (socket) => {
                   type: 'done',
                   text: result,
                   costUsd: msg.total_cost_usd ?? null,
+                  durationMs: turnStartedAt ? Date.now() - turnStartedAt : null,
                 })
               }
             } else {
@@ -1546,6 +1694,7 @@ wss.on('connection', (socket) => {
       const id = typeof msg.id === 'string' ? msg.id : null
       void settling.then(() => {
         answering = id
+        turnStartedAt = Date.now()
         if (deliver) {
           const resolve = deliver
           deliver = null

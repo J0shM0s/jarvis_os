@@ -266,6 +266,14 @@ type State = {
   /** Sandbox: virtueller Desktop statt Live-Desktop */
   sandboxActive: boolean
   sandboxImage: string | null
+  /** Work Window — CEO Arbeitsablauf (Denken, Verteilen, Skills, Sub-Agenten) */
+  workOpen: boolean
+  workTask: string | null
+  workEvents: Array<{ id: string; at: number; type: 'thought' | 'tool' | 'skill' | 'delegate' | 'team' | 'subagent' | 'status'; title: string; detail?: string; agent?: string; level?: number }>
+  workMinimized: boolean
+  workCost: number | null
+  workDurationMs: number | null
+  workStartedAt: number | null
 
   setVoice: (v: string) => void
   setGestures: (on: boolean) => void
@@ -297,6 +305,14 @@ type State = {
   clearOsLogs: () => void
   setSandboxActive: (on: boolean) => void
   setSandboxImage: (dataUrl: string | null) => void
+  setWorkOpen: (open: boolean) => void
+  setWorkMinimized: (min: boolean) => void
+  setWorkTask: (task: string | null) => void
+  pushWorkEvent: (e: { type: 'thought' | 'tool' | 'skill' | 'delegate' | 'team' | 'subagent' | 'status'; title: string; detail?: string; agent?: string; level?: number }) => void
+  clearWorkEvents: () => void
+  setWorkCost: (c: number | null) => void
+  setWorkDuration: (ms: number | null) => void
+  setWorkStartedAt: (t: number | null) => void
 
   applyUi: (patch: UiPatch) => void
   addOrbit: (o: OrbitObject) => void
@@ -332,11 +348,26 @@ export const useStore = create<State>((set) => ({
   osLogs: [],
   sandboxActive: false,
   sandboxImage: null,
+  workOpen: false,
+  workTask: null,
+  workEvents: [],
+  workMinimized: false,
+  workCost: null,
+  workDurationMs: null,
+  workStartedAt: null,
 
   setBusinessMode: (businessMode) => set({ businessMode }),
   toggleBusinessMode: () => set((s) => ({ businessMode: !s.businessMode })),
   pushOsLog: (text) => set((s) => ({ osLogs: [...s.osLogs.slice(-80), { id: `log${Date.now()}${Math.random().toString(36).slice(2,5)}`, text, at: Date.now() }] })),
   clearOsLogs: () => set({ osLogs: [] }),
+  setWorkOpen: (workOpen) => set({ workOpen }),
+  setWorkMinimized: (workMinimized) => set({ workMinimized }),
+  setWorkTask: (workTask) => set({ workTask }),
+  pushWorkEvent: (e) => set((s) => ({ workEvents: [...s.workEvents.slice(-120), { id: `we${Date.now()}${Math.random().toString(36).slice(2,5)}`, at: Date.now(), ...e }] })),
+  clearWorkEvents: () => set({ workEvents: [] }),
+  setWorkCost: (workCost) => set({ workCost }),
+  setWorkDuration: (workDurationMs) => set({ workDurationMs }),
+  setWorkStartedAt: (workStartedAt) => set({ workStartedAt }),
   setSandboxActive: (on) => set({ sandboxActive: on }),
   setSandboxImage: (sandboxImage) => set({ sandboxImage }),
 

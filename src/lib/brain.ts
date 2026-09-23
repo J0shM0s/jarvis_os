@@ -29,10 +29,10 @@ export async function ask(
   history: Msg[],
   handlers: AskHandlers,
   opts: { businessMode?: boolean } = {},
-): Promise<{ text: string; tools: string[] }> {
+): Promise<{ text: string; tools: string[]; costUsd?: number; durationMs?: number }> {
   return usingBridge
     ? bridge.ask(prompt, handlers, opts)
-    : direct.ask([...history, { role: 'user', content: prompt }], handlers)
+    : direct.ask([...history, { role: 'user', content: prompt }], handlers) as any
 }
 
 export async function warm(): Promise<void> {

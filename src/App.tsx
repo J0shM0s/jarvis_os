@@ -141,6 +141,15 @@ export default function App() {
     s.setCaption('')
     s.pushTurn({ id: newId(), role: 'user', text: said })
     s.setPhase('thinking')
+    // Work Window: auf, Task setzen, alte Events leeren — Chat bleibt nur für finale Antwort
+    s.setWorkTask(said)
+    s.setWorkOpen(true)
+    s.setWorkMinimized(false)
+    s.clearWorkEvents()
+    s.setWorkCost(null)
+    s.setWorkDuration(null)
+    s.setWorkStartedAt(Date.now())
+    s.pushWorkEvent({ type: 'status', title: `Task erhalten: ${said.slice(0, 80)}`, agent: 'CEO', level: 0 })
 
     const spk = createSpeaker()
     speaker.current = spk
@@ -150,37 +159,65 @@ export default function App() {
     const turnId = newId()
     let started = false
     let filled = false
+    let thoughtBuf = ''
+    let finalText = ''
+
+    const flushThought = () => {
+      if (!thoughtBuf.trim()) return
+      const t = thoughtBuf
+      thoughtBuf = ''
+      store.getState().pushWorkEvent({ type: 'thought', title: t.slice(0, 180), detail: t.length > 180 ? t : undefined, agent: 'CEO', level: 0 })
+    }
+
+    const classifyTool = (raw: string) => {
+      const n = raw.toLowerCase()
+      if (n.includes('ceo_invoke_planner')) return { type: 'delegate' as const, agent: 'CEO → PLANNER', level: 1 }
+      if (n.includes('ceo_delegate')) return { type: 'delegate' as const, agent: 'PLANNER → WORKER', level: 2 }
+      if (n.includes('ceo_spawn_team')) return { type: 'team' as const, agent: 'PLANNER → TEAM', level: 2 }
+      if (n.includes('ceo_critic_review')) return { type: 'delegate' as const, agent: 'WORKER → CRITIC', level: 3 }
+      if (n.includes('ceo_list_skills') || n.includes('ceo_read_skill') || n.includes('ceo_auto_route')) return { type: 'skill' as const, agent: 'PLANNER', level: 1 }
+      if (n.startsWith('mcp__') && n.includes('__task')) return { type: 'subagent' as const, agent: 'SUB', level: 2 }
+      if (n.includes('browser') || n.includes('chrome')) return { type: 'tool' as const, agent: 'BROWSER-AGENT', level: 1 }
+      if (n.includes('voicestudio') || n.includes('eleven')) return { type: 'tool' as const, agent: 'VOICE-AGENT', level: 1 }
+      if (n.includes('univer')) return { type: 'tool' as const, agent: 'OFFICE-AGENT', level: 1 }
+      if (n.includes('seo') || n.includes('keyword') || n.includes('serp')) return { type: 'tool' as const, agent: 'SEO-AGENT', level: 1 }
+      if (n.includes('higgs') || n.includes('humanizer') || n.includes('image')) return { type: 'tool' as const, agent: 'CREATIVE-AGENT', level: 1 }
+      if (raw.startsWith('mcp__')) {
+        const parts = raw.split('__')
+        const server = parts[1] || 'tool'
+        return { type: 'tool' as const, agent: server.toUpperCase(), level: 1 }
+      }
+      return { type: 'tool' as const, agent: 'WORKER', level: 1 }
+    }
 
     try {
       const bm = store.getState().businessMode
-      const { text } = await ask(said, history.current, {
+      const { text, costUsd, durationMs } = await ask(said, history.current, {
         onText: (delta) => {
           if (stale()) return
+          // Work Window: Denken puffern, nicht direkt in Chat — Chat nur finale Antwort
+          thoughtBuf += delta
+          finalText += delta
+          spk.push(delta)
+          // Streaming-Phase: Chat bleibt leer bis done, aber Speaking-Phase für Reactor an
           if (!started) {
             started = true
             store.getState().setPhase('speaking')
-            // The answer arriving is what ends the tool phase — a timer would
-            // clear the readout while a slow tool was still running.
             store.getState().setActiveTool(null)
             music.working(false)
-            store.getState().pushTurn({ id: turnId, role: 'jarvis', text: '' })
           }
-          store.getState().appendToLastTurn(delta)
-          spk.push(delta)
+          // Flush alle ~120 Zeichen als Work-Event
+          if (thoughtBuf.length > 120 || delta.includes('\n')) flushThought()
         },
         onTool: (name) => {
           if (stale()) return
-          // Only claim the tooling phase while he has nothing to say yet.
-          // Setting it unconditionally pinned the machine in 'tooling' for the
-          // rest of any answer that called a tool after it started talking,
-          // which also broke the reactor's lip-sync for the remainder.
+          flushThought()
+          const c = classifyTool(name)
+          store.getState().pushWorkEvent({ type: c.type, title: name.replace(/mcp__/, '').replace(/__/g, ' · '), agent: c.agent, level: c.level, detail: `Wird von ${c.agent} ausgeführt` })
           if (!started) store.getState().setPhase('tooling')
           store.getState().setActiveTool(name)
           sfx.play('tool')
           music.working(true)
-          // Say something the moment work starts — a tool can take ten seconds
-          // and silence that long reads as a crash. Once per turn only; a
-          // chain of five tools shouldn't produce five apologies.
           if (!filled && !started) {
             filled = true
             spk.say(forTool(name))
@@ -201,27 +238,57 @@ export default function App() {
        * turns land here — a streamed one already has its deltas in the
        * transcript, and appending the final text would say it all twice.
        */
-      if (!started && text) {
-        started = true
-        store.getState().setPhase('speaking')
-        store.getState().setActiveTool(null)
-        music.working(false)
+      // Work-Fenster: restlichen Gedanken flushen
+      flushThought()
+      // Chat bekommt NUR die finale Antwort — nicht das Streaming. Work-Fenster hat den Ablauf.
+      const answer = (finalText || text || '').trim()
+      if (answer) {
+        if (!started) {
+          store.getState().setPhase('speaking')
+          store.getState().setActiveTool(null)
+          music.working(false)
+          spk.push(answer)
+        }
+        store.getState().pushTurn({ id: turnId, role: 'jarvis', text: answer })
+        store.getState().pushWorkEvent({ type: 'status', title: `Antwort bereit (${answer.length} Zeichen)`, detail: answer.slice(0, 200), agent: 'CEO', level: 0 })
+      } else if (text) {
         store.getState().pushTurn({ id: turnId, role: 'jarvis', text })
-        spk.push(text)
       }
 
       // The bridge keeps conversation state in its own session, so history is
       // only threaded through on the direct path.
       if (!usingBridge) {
+        const histText = answer || text || '…'
         history.current.push({ role: 'user', content: said })
-        history.current.push({ role: 'assistant', content: text || '…' })
+        history.current.push({ role: 'assistant', content: histText })
         if (history.current.length > 16) {
           history.current = history.current.slice(-16)
         }
       }
 
+      // Kosten & Dauer in Store + History
+      const dur = durationMs ?? (store.getState().workStartedAt ? Date.now() - store.getState().workStartedAt! : null)
+      if (costUsd != null) store.getState().setWorkCost(costUsd)
+      if (dur != null) store.getState().setWorkDuration(dur)
+      const costStr = costUsd != null ? ` · $${Number(costUsd).toFixed(4)}` : ''
+      const durStr = dur != null ? ` · ${(dur/1000).toFixed(1)}s` : ''
+      if (costStr || durStr) store.getState().pushWorkEvent({ type: 'status', title: `Kosten${costStr}${durStr}`, detail: `Tools: ${store.getState().workEvents.filter(e=>e.type==='tool'||e.type==='skill'||e.type==='delegate').length} · Delegationen: ${store.getState().workEvents.filter(e=>e.type==='delegate'||e.type==='team').length}`, agent: 'CEO', level: 0 })
+
       await spk.end()
       if (stale()) return
+      // WorkWindow bleibt offen, minimiert nicht automatisch — User sieht Ergebnis
+      store.getState().pushWorkEvent({ type: 'status', title: 'Task abgeschlossen — Antwort im Chat', agent: 'CEO', level: 0 })
+
+      // History persistieren (async, non-blocking)
+      try {
+        const hist = {
+          id: turnId, task: said, answer: answer.slice(0, 4000), costUsd: costUsd ?? null, durationMs: dur ?? null,
+          events: store.getState().workEvents.slice(-80), at: new Date().toISOString(),
+          tools: store.getState().workEvents.filter(e=>e.type==='tool').map(e=>e.title).slice(0,12),
+          skills: [...new Set(store.getState().workEvents.filter(e=>e.type==='skill').map(e=>e.title))],
+        }
+        fetch('http://localhost:8787/ceo/history', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(hist) }).catch(()=>{})
+      } catch {}
       sfx.play('done')
     } catch (err) {
       if (stale()) return
@@ -960,6 +1027,21 @@ export default function App() {
         return
       }
 
+      // W toggles Work Window — CEO Arbeitsablauf (Denken, Verteilen, Sub-Agenten)
+      if ((e.key === 'w' || e.key === 'W') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        const st = store.getState()
+        if (st.workOpen) {
+          if (st.workMinimized) st.setWorkMinimized(false)
+          else st.setWorkOpen(false)
+        } else {
+          st.setWorkOpen(true)
+          st.setWorkMinimized(false)
+        }
+        sfx.play('done')
+        return
+      }
+
       // Space starts a turn without the wake word. Worth using while filming so
       // a missed wake word doesn't cost a take.
       if (e.code !== 'Space' || e.repeat) return
@@ -1007,22 +1089,38 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // TAP button — gleiche Logik wie Space
+  // Proaktiv-Cron: alle 60s /proactive/briefing prüfen, einmal pro Tag anzeigen
   useEffect(() => {
-    const tap = () => {
-      const phase = store.getState().phase
-      if (phase === 'offline') void powerOn()
-      else if (phase === 'boot') return
-      else if (phase === 'thinking' || phase === 'tooling' || phase === 'speaking') {
-        onSpeechStart()
-        listen(AWAIT_SPEECH_MS)
-      } else {
-        onWake('')
-      }
+    let lastShown = localStorage.getItem('jarvis_briefing_shown') || ''
+    const check = async () => {
+      if (store.getState().phase === 'offline' || store.getState().phase === 'boot') return
+      try {
+        const r = await fetch('http://localhost:8787/proactive/briefing', { signal: AbortSignal.timeout(3000) })
+        if (r.status === 204) return
+        if (!r.ok) return
+        const j = await r.json()
+        const txt: string = j.briefing || ''
+        if (!txt.trim()) return
+        const key = txt.slice(0, 80)
+        if (key === lastShown) return
+        lastShown = key
+        localStorage.setItem('jarvis_briefing_shown', key)
+        store.getState().pushWorkEvent({ type: 'status', title: 'Proaktiv Briefing neu', detail: txt.slice(0, 300), agent: 'CEO', level: 0 })
+        store.getState().setWorkOpen(true)
+        // sanfte Hinweis-Sprache, nicht aufdringlich
+        const spk = createSpeaker()
+        speaker.current = spk
+        spk.say('Sir, ein neues Briefing liegt vor.')
+        void spk.end()
+      } catch {}
     }
-    ;(window as unknown as { __jarvisTap?: () => void }).__jarvisTap = tap
-    return () => { delete (window as unknown as { __jarvisTap?: () => void }).__jarvisTap }
+    const id = window.setInterval(check, 60_000)
+    // einmal beim Start nach Boot
+    setTimeout(check, 15000)
+    return () => clearInterval(id)
   }, [])
+
+
 
   return (
     <>
