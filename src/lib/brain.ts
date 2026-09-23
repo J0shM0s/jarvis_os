@@ -79,6 +79,9 @@ export function watchSandboxImage(fn: (dataUrl: string) => void): void {
 export function watchSandboxActive(fn: (on: boolean) => void): void {
   if (usingBridge) bridge.watchSandboxActive(fn)
 }
+export function watchAgentBrowserImage(fn: (dataUrl: string) => void): void {
+  if (usingBridge) bridge.watchAgentBrowserImage(fn)
+}
 
 /**
  * The one thing the bridge asks US for.

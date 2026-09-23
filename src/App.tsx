@@ -28,6 +28,7 @@ import {
   watchOsLog,
   watchSandboxImage,
   watchSandboxActive,
+  watchAgentBrowserImage,
   watchConnection,
   connectedLabels,
   usingBridge,
@@ -639,6 +640,13 @@ export default function App() {
       s.setSandboxActive(true)
     })
     watchSandboxActive((on) => store.getState().setSandboxActive(on))
+    watchAgentBrowserImage((dataUrl) => {
+      const s = store.getState()
+      if (dataUrl) {
+        s.setAgentBrowserImage(dataUrl)
+        s.setAgentBrowserActive(true)
+      }
+    })
     watchConnection((state) => {
       if (state === 'lost') {
         store.getState().setError('Verbinde neu — Bridge startet neu...')

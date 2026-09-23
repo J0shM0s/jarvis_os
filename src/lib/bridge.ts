@@ -118,6 +118,10 @@ let onSandboxActive: ((on: boolean) => void) | null = null
 export function watchSandboxActive(fn: (on: boolean) => void) {
   onSandboxActive = fn
 }
+let onAgentBrowserImage: ((dataUrl: string) => void) | null = null
+export function watchAgentBrowserImage(fn: (dataUrl: string) => void) {
+  onAgentBrowserImage = fn
+}
 
 /**
  * Connection state, for the UI.
@@ -229,6 +233,8 @@ function dispatch(ws: WebSocket) {
       onSandboxImage?.(msg.data)
     } else if (msg.type === 'sandbox_active') {
       onSandboxActive?.(Boolean(msg.active))
+    } else if (msg.type === 'agent_browser_image' && typeof msg.data === 'string') {
+      onAgentBrowserImage?.(msg.data)
     }
   })
 }

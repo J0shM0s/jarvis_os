@@ -1466,7 +1466,7 @@ wss.on('connection', (socket) => {
         jarvis_business: businessServer(),
         jarvis_brains: brainsServer(),
         jarvis_ceo: ceoServer(),
-        jarvis_agent_browser: agentBrowserServer(),
+        jarvis_agent_browser: agentBrowserServer((dataUrl) => send({ type: 'agent_browser_image', data: dataUrl })),
         // The user's own Chrome, over the extension's native-host socket. It
         // holds no per-connection state, but it is built here with the rest so
         // the write gate is read once, at the same point as everything else.

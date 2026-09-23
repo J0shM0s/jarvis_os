@@ -266,6 +266,9 @@ type State = {
   /** Sandbox: virtueller Desktop statt Live-Desktop */
   sandboxActive: boolean
   sandboxImage: string | null
+  /** Agent Browser Live — eigener Browser für neal.fun etc. */
+  agentBrowserImage: string | null
+  agentBrowserActive: boolean
   /** Work Window — CEO Arbeitsablauf (Denken, Verteilen, Skills, Sub-Agenten) */
   workOpen: boolean
   workTask: string | null
@@ -313,6 +316,8 @@ type State = {
   setWorkCost: (c: number | null) => void
   setWorkDuration: (ms: number | null) => void
   setWorkStartedAt: (t: number | null) => void
+  setAgentBrowserImage: (url: string | null) => void
+  setAgentBrowserActive: (on: boolean) => void
 
   applyUi: (patch: UiPatch) => void
   addOrbit: (o: OrbitObject) => void
@@ -348,6 +353,8 @@ export const useStore = create<State>((set) => ({
   osLogs: [],
   sandboxActive: false,
   sandboxImage: null,
+  agentBrowserImage: null,
+  agentBrowserActive: false,
   workOpen: false,
   workTask: null,
   workEvents: [],
@@ -360,6 +367,8 @@ export const useStore = create<State>((set) => ({
   toggleBusinessMode: () => set((s) => ({ businessMode: !s.businessMode })),
   pushOsLog: (text) => set((s) => ({ osLogs: [...s.osLogs.slice(-80), { id: `log${Date.now()}${Math.random().toString(36).slice(2,5)}`, text, at: Date.now() }] })),
   clearOsLogs: () => set({ osLogs: [] }),
+  setAgentBrowserImage: (agentBrowserImage) => set({ agentBrowserImage }),
+  setAgentBrowserActive: (agentBrowserActive) => set({ agentBrowserActive }),
   setWorkOpen: (workOpen) => set({ workOpen }),
   setWorkMinimized: (workMinimized) => set({ workMinimized }),
   setWorkTask: (workTask) => set({ workTask }),

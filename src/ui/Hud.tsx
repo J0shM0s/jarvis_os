@@ -10,6 +10,7 @@ import { Pointer } from './Pointer'
 import { GestureGuide } from './GestureGuide'
 import { OsLog } from './OsLog'
 import { SandboxView } from './SandboxView'
+import { AgentBrowserView } from './AgentBrowserView'
 import { WorkflowsBoard } from './WorkflowsBoard'
 import { WorkWindow } from './WorkWindow'
 import { CommandPalette } from './CommandPalette'
@@ -363,6 +364,7 @@ export function Hud() {
       <Composer />
       <OsLog />
       <SandboxView />
+      <AgentBrowserView />
       <WorkflowsBoard />
       <WorkWindow />
       <CommandPalette />

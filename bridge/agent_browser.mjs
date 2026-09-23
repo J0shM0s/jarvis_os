@@ -11,10 +11,11 @@ try { mkdirSync(PROFILE_DIR, { recursive: true }) } catch {}
 let context = null
 let page = null
 let browser = null
+let liveInterval = null
+let emitLive = null
 
 async function ensureBrowser() {
   if (context && page && !page.isClosed()) return { context, page }
-  // Close old if exists
   if (context) try { await context.close() } catch {}
   if (browser) try { await browser.close() } catch {}
   browser = await chromium.launchPersistentContext(PROFILE_DIR, {
@@ -23,14 +24,14 @@ async function ensureBrowser() {
     args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
     ignoreDefaultArgs: ['--enable-automation'],
   })
-  // Use first page or create new
   const pages = browser.pages()
   page = pages[0] || await browser.newPage()
   context = browser
-  // Stealth: hide webdriver
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => false })
   })
+  // Auto live: wenn Seite navigiert, sende Screenshot
+  page.on('framenavigated', () => { setTimeout(emitScreenshot, 800) })
   return { context, page }
 }
 
@@ -39,11 +40,29 @@ async function getPage() {
   return p
 }
 
+async function emitScreenshot() {
+  if (!emitLive || !page || page.isClosed()) return
+  try {
+    const buf = await page.screenshot({ type: 'png' })
+    emitLive(`data:image/png;base64,${buf.toString('base64')}`)
+  } catch {}
+}
+
+function startLive(intervalMs = 800) {
+  if (liveInterval) clearInterval(liveInterval)
+  liveInterval = setInterval(emitScreenshot, intervalMs)
+  setTimeout(emitScreenshot, 200)
+}
+function stopLive() {
+  if (liveInterval) { clearInterval(liveInterval); liveInterval = null }
+}
+
 function toMcpResult(text, isError = false) {
   return { isError, content: [{ type: 'text', text }] }
 }
 
-export function agentBrowserServer() {
+export function agentBrowserServer(emitImage) {
+  emitLive = emitImage || null
   return createSdkMcpServer({
     name: 'agent_browser',
     version: '1.0.0',
@@ -53,16 +72,18 @@ It has its own cookies/storage, stays logged in across tasks. For user's already
 This browser is VISIBLE (headless false) and you can see it via screenshots.`,
     alwaysLoad: true,
     tools: [
-      tool('agent_browser_navigate', 'Navigate agent browser to URL. Use for canva.com, zalando.de, fiverr.com etc. - this is YOUR browser, you can log in.',
+      tool('agent_browser_navigate', 'Navigate agent browser to URL. Use for canva.com, zalando.de, fiverr.com, neal.fun etc. - this is YOUR browser, you can log in. Live view auto-starts.',
         { url: z.string().describe('https://... or "back"/"forward"') },
         async ({ url }) => {
           const p = await getPage()
           try {
-            if (url === 'back') { await p.goBack(); return toMcpResult(`Navigated back, now at ${p.url()}`) }
-            if (url === 'forward') { await p.goForward(); return toMcpResult(`Forward, now at ${p.url()}`) }
+            startLive(700)
+            if (url === 'back') { await p.goBack(); await p.waitForTimeout(800); emitScreenshot(); return toMcpResult(`Navigated back, now at ${p.url()}`) }
+            if (url === 'forward') { await p.goForward(); await p.waitForTimeout(800); emitScreenshot(); return toMcpResult(`Forward, now at ${p.url()}`) }
             await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
-            await p.waitForTimeout(1500)
-            return toMcpResult(`Navigated to ${p.url()} - title: ${await p.title()}`)
+            await p.waitForTimeout(1200)
+            emitScreenshot()
+            return toMcpResult(`Navigated to ${p.url()} - title: ${await p.title()} - LIVE view active in Jarvis (Agent Browser Fenster)`)
           } catch (e) { return toMcpResult(`Navigate failed: ${e.message}`, true) }
         }),
 
@@ -96,20 +117,22 @@ This browser is VISIBLE (headless false) and you can see it via screenshots.`,
           }
         }),
 
-      tool('agent_browser_click', 'Click element by selector or text. Use agent_browser_read first to find selectors.',
+      tool('agent_browser_click', 'Click element by selector or text. Use agent_browser_read first.',
         {
-          selector: z.string().optional().describe('CSS selector, e.g. "button:has-text(\'Login\')" or "[data-testid=\'login\']"'),
-          text: z.string().optional().describe('Exact text of element to click, alternative to selector'),
-          x: z.number().optional().describe('X coordinate fallback'),
-          y: z.number().optional().describe('Y coordinate fallback'),
+          selector: z.string().optional().describe('CSS selector'),
+          text: z.string().optional().describe('Text to click'),
+          x: z.number().optional(),
+          y: z.number().optional(),
         },
         async ({ selector, text, x, y }) => {
           const p = await getPage()
           try {
-            if (selector) { await p.click(selector, { timeout: 10000 }); return toMcpResult(`Clicked ${selector} at ${p.url()}`) }
-            if (text) { await p.getByText(text, { exact: false }).first().click({ timeout: 10000 }); return toMcpResult(`Clicked text "${text}"`) }
-            if (x !== undefined && y !== undefined) { await p.mouse.click(x, y); return toMcpResult(`Clicked at ${x},${y}`) }
-            return toMcpResult('Need selector, text, or x/y', true)
+            if (selector) await p.click(selector, { timeout: 10000 })
+            else if (text) await p.getByText(text, { exact: false }).first().click({ timeout: 10000 })
+            else if (x !== undefined && y !== undefined) await p.mouse.click(x, y)
+            else return toMcpResult('Need selector, text, or x/y', true)
+            await p.waitForTimeout(600); emitScreenshot()
+            return toMcpResult(`Clicked ${selector||text||`${x},${y}`} at ${p.url()} - live view updated`)
           } catch (e) { return toMcpResult(`Click failed: ${e.message}`, true) }
         }),
 
@@ -169,8 +192,18 @@ This browser is VISIBLE (headless false) and you can see it via screenshots.`,
           const { context: ctx } = await ensureBrowser()
           const p = await ctx.newPage()
           page = p
-          if (url) await p.goto(url, { waitUntil: 'domcontentloaded' })
+          if (url) { await p.goto(url, { waitUntil: 'domcontentloaded' }); emitScreenshot() }
           return toMcpResult(`New tab at ${p.url()}`)
+        }),
+
+      tool('agent_browser_live', 'Live view control for Jarvis. Shows browser live in Jarvis window while solving (e.g. neal.fun captchas).',
+        {
+          enabled: z.boolean().describe('true=start live 700ms stream, false=stop'),
+          interval: z.number().optional().describe('ms, default 700'),
+        },
+        async ({ enabled, interval }) => {
+          if (enabled) { startLive(interval || 700); return toMcpResult('Live view AN — Jarvis zeigt Browser live (700ms), ideal für neal.fun am i human') }
+          else { stopLive(); return toMcpResult('Live view AUS') }
         }),
     ],
   })

@@ -2142,6 +2142,24 @@ kbd {
 .cmd-desc { font-size:10px; opacity:0.55; }
 .cmd-keys { font-size:9px; padding:2px 6px; border:1px solid #00e5ff33; opacity:0.7; }
 .cmd-empty { padding:12px; opacity:0.5; font-size:11px; text-align:center; }
+.agent-browser-wrap {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 31; width: min(860px, 90vw); max-height: 76vh;
+  display: flex; flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
+  background: linear-gradient(160deg, rgba(4,12,18,0.98), rgba(2,8,12,0.98));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.6), 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent) inset;
+  pointer-events: auto; font-family: 'JetBrains Mono', monospace;
+}
+.agent-browser-head { display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid color-mix(in srgb, var(--accent) 18%, transparent); background: color-mix(in srgb, var(--accent) 7%, transparent); font-size:9px; letter-spacing:0.16em; text-transform:uppercase; }
+.agent-browser-title { flex:1; }
+.agent-browser-badge { padding:2px 6px; background: var(--accent); color:#000; font-size:8px; border-radius:2px; }
+.agent-browser-close { appearance:none; border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); background:transparent; color:var(--accent); width:22px; height:22px; cursor:pointer; }
+.agent-browser-body { flex:1; min-height:0; display:flex; flex-direction:column; overflow:auto; background:#000; }
+.agent-browser-img { display:block; width:100%; max-height:66vh; object-fit:contain; }
+.agent-browser-empty { padding:32px; text-align:center; opacity:0.55; font-size:11px; font-family:'Chakra Petch',sans-serif; text-transform:none; letter-spacing:normal; }
+.agent-browser-foot { padding:6px 10px; border-top:1px solid color-mix(in srgb, var(--accent) 12%, transparent); font-size:9px; opacity:0.45; font-family:'Chakra Petch',sans-serif; text-transform:none; }
 .work-body::-webkit-scrollbar { width:7px }
 .work-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 28%, transparent); border-radius:7px; }
 .work-tree { border-bottom:1px solid color-mix(in srgb, var(--accent) 16%, transparent); padding:6px 0 8px; margin-bottom:6px; background: color-mix(in srgb, var(--accent) 3%, transparent); }
