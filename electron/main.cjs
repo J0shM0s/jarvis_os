@@ -172,10 +172,10 @@ async function startBridge(withProxy) {
       env.ANTHROPIC_API_KEY = process.env.OPENROUTER_API_KEY || 'sk-jarvis-local';
       env.ANTHROPIC_AUTH_TOKEN = '';
       if (process.env.BRAIN_PROXY_SECRET) env.ANTHROPIC_CUSTOM_HEADERS = `x-brain-secret: ${process.env.BRAIN_PROXY_SECRET}`;
-      env.JARVIS_MODEL = 'sonnet';
-      env.ANTHROPIC_DEFAULT_HAIKU_MODEL = 'sonnet';
-      env.ANTHROPIC_DEFAULT_SONNET_MODEL = 'sonnet';
-      env.ANTHROPIC_DEFAULT_OPUS_MODEL = 'sonnet';
+      env.JARVIS_MODEL = 'claude-sonnet-4-20250514';
+      env.ANTHROPIC_DEFAULT_HAIKU_MODEL = 'claude-sonnet-4-20250514';
+      env.ANTHROPIC_DEFAULT_SONNET_MODEL = 'claude-sonnet-4-20250514';
+      env.ANTHROPIC_DEFAULT_OPUS_MODEL = 'claude-sonnet-4-20250514';
       env.CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = '1';
     }
     const b = path.join(UNPACKED_ROOT, 'bridge/server.mjs');

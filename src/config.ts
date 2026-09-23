@@ -136,8 +136,8 @@ export const env = {
   porcupineKey: str(import.meta.env.VITE_PICOVOICE_ACCESS_KEY) ?? '',
 }
 
-/** `sonnet` alias works for both CLI and API (proxy rewrites to OpenRouter target); direct API also accepts full ID. */
-export const MODEL = 'sonnet'
+/** Existierendes Modell: claude-sonnet-4-20250514 (stark, schnell). Proxy rewrites zu OpenRouter TARGET. */
+export const MODEL = 'claude-sonnet-4-20250514'
 
 /**
  * Fast mode runs the same Opus 5 at up to 2.5x output speed. It is a research
