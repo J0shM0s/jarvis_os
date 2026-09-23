@@ -274,25 +274,13 @@ function connect(): Promise<WebSocket> {
       everConnected = true
     }
     ws.onerror = () => {
-      /**
-       * The browser will not tell us why.
-       *
-       * A refused handshake and a rejected Origin arrive here identically — no
-       * status, no reason, just `error` — and the two have completely different
-       * fixes. The old message named only one of them, and confidently: it said
-       * to start the bridge. When the real cause was the page being served on a
-       * port outside the range the bridge trusts, that advice sent everyone to
-       * inspect a process that was running perfectly the whole time.
-       *
-       * So say both, and put the actual port in front of them, since that is
-       * the fact that distinguishes the two cases at a glance.
-       */
+      // Bridge nicht erreichbar — häufigste Ursache: Bridge-Prozess nicht gestartet
+      // Zweite Ursache (früher): falscher Origin-Port. Seit Fix erlaubt Bridge jeden localhost-Port + LAN.
       settle(
         new Error(
-          `Cannot reach the bridge at ${BRIDGE_WS_URL}. Either it is not ` +
-            'running (start it with `npm start`), or this page is on a port it ' +
-            `refuses — it accepts localhost:5173-5199 and 4173-4199, and this ` +
-            `page is on ${location.port || '80'}.`,
+          `Cannot reach the bridge at ${BRIDGE_WS_URL}. Is it running? ` +
+            `Start with \`npm start\` (Electron) or \`npm run bridge\` in a second terminal. ` +
+            `If it is running, this page is on ${location.protocol}//${location.hostname || 'localhost'}${location.port ? ':' + location.port : ''} — bridge accepts any http://localhost:* and http://192.168.*:* and file://.`,
         ),
       )
     }

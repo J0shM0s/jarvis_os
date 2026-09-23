@@ -92,9 +92,17 @@ function originAllowed(origin) {
   }
   if (url.protocol === 'file:') return true
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
-  if (!LOCAL_HOSTS.has(url.hostname)) return false
-  if (!url.port) return true
-  // Jeder localhost Port erlaubt — Vite wählt freien Port, Electron nutzt file://, alles lokal ist ok
+  const host = url.hostname
+  // localhost + loopback + LAN + private IPs erlaubt — alles was lokal erreichbar ist
+  const isPrivateIP = (h) =>
+    h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1' ||
+    LOCAL_HOSTS.has(h) ||
+    /^192\.168\.\d+\.\d+$/.test(h) ||
+    /^10\.\d+\.\d+\.\d+$/.test(h) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(h) ||
+    h === '0.0.0.0'
+  if (!isPrivateIP(host)) return false
+  // Jeder Port erlaubt — Vite, Preview, Port 80 (prod), Electron file://
   return true
 }
 
