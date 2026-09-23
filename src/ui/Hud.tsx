@@ -312,11 +312,11 @@ export function Hud() {
         )}
       </AnimatePresence>
 
-      {/* Conversation log — last few turns, fading upward */}
+      {/* Conversation log — nur letztes Resultat, Rest im WorkWindow (W) */}
       {ui.chrome.transcript && (
         <div className="log">
           <AnimatePresence initial={false}>
-            {turns.slice(-4).map((t) => (
+            {turns.filter(t => t.role === 'jarvis').slice(-1).map((t) => (
               <motion.div
                 key={t.id}
                 className={`log-line log-${t.role}`}
