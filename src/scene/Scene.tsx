@@ -9,9 +9,9 @@ import {
 } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
-import { Core } from './Core'
 import { Particles } from './Particles'
 import { Orbits } from './Orbits'
+import { JarvisThinkingOrb } from './JarvisThinkingOrb'
 import { useStore, phaseColor, accentFor, type Phase } from '../store'
 
 /** Rings spin harder while JARVIS is working — reads as effort. */
@@ -106,25 +106,7 @@ function aim(tint: Tint, css: string): THREE.Color {
 
 const STYLE_INDEX = { ring: 0, sphere: 1, wire: 2 } as const
 
-function Rig() {
-  const drive = useMemo<Drive>(
-    () => ({
-      color: new THREE.Color(phaseColor.offline),
-      level: 0,
-      spin: spinFor.offline,
-      amp: AMP_CALM,
-      open: 0,
-      reactor: {
-        color: new THREE.Color(phaseColor.offline),
-        scale: 1,
-        intensity: 1,
-        spin: 1,
-        style: STYLE_INDEX.ring,
-        visible: true,
-      },
-    }),
-    [],
-  )
+function Rig({ drive }: { drive: Drive }) {
   const target = useMemo<Tint>(() => ({ key: '', color: new THREE.Color() }), [])
   const reactorTarget = useMemo<Tint>(
     () => ({ key: '', color: new THREE.Color() }),
@@ -185,7 +167,6 @@ function Rig() {
   // subject is one unbroken one.
   return (
     <>
-      <Core drive={drive} />
       <Particles drive={drive} />
       <Orbits />
     </>
@@ -193,14 +174,33 @@ function Rig() {
 }
 
 export function Scene() {
+  const drive = useMemo<Drive>(
+    () => ({
+      color: new THREE.Color(phaseColor.offline),
+      level: 0,
+      spin: spinFor.offline,
+      amp: AMP_CALM,
+      open: 0,
+      reactor: {
+        color: new THREE.Color(phaseColor.offline),
+        scale: 1,
+        intensity: 1,
+        spin: 1,
+        style: STYLE_INDEX.ring,
+        visible: true,
+      },
+    }),
+    [],
+  )
   return (
-    <Canvas
-      className="scene"
-      camera={{ position: [0, 0, 6.2], fov: 45 }}
-      gl={{ antialias: true, alpha: true }}
-      dpr={[1, 2]}
-    >
-      <Rig />
+    <>
+      <Canvas
+        className="scene"
+        camera={{ position: [0, 0, 6.2], fov: 45 }}
+        gl={{ antialias: true, alpha: true }}
+        dpr={[1, 2]}
+      >
+        <Rig drive={drive} />
       {/*
         multisampling={0} on purpose. The default is 8, which allocates a
         half-float MSAA target — at dpr 2 that is a 3200x1800 buffer — and there
@@ -220,8 +220,6 @@ export function Scene() {
         {/* Bloom is what turns additive lines into "hologram". */}
         <Bloom
           intensity={1.15}
-          // A higher threshold keeps the mid-tones intact so the orb doesn't
-          // flatten into a solid white disc.
           luminanceThreshold={0.22}
           luminanceSmoothing={0.85}
           mipmapBlur
@@ -236,5 +234,7 @@ export function Scene() {
         <Vignette eskil={false} offset={0.22} darkness={0.95} />
       </EffectComposer>
     </Canvas>
+      <JarvisThinkingOrb drive={drive} />
+    </>
   )
 }
