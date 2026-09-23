@@ -27,6 +27,7 @@ import { filesystemServer } from './filesystem.mjs'
 import { businessServer } from './business.mjs'
 import { brainsServer } from './brains.mjs'
 import { ceoServer } from './ceo.mjs'
+import { agentBrowserServer } from './agent_browser.mjs'
 import { homedir, tmpdir } from 'node:os'
 import { existsSync, readFileSync, realpathSync, statSync, readdirSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
@@ -312,6 +313,7 @@ function decideTool(name) {
     if (server === 'jarvis_business') return true
     if (server === 'jarvis_brains') return true
     if (server === 'jarvis_ceo') return true
+    if (server === 'jarvis_agent_browser') return true
 
     const tool = mcpToolOf(name)
     if (EFFECTFUL_VERB.test(tool) && !VETO_EXEMPT.has(`${server}__${tool}`)) {
@@ -442,6 +444,12 @@ browser or a web page:
 - Before anything that sends, buys, deletes or posts, say in one sentence what
   you are about to do. After it, say what happened.
 - If the browser is unreachable, say so once, dann sofort via Blade weitermachen — keine Sackgasse.
+
+Dein EIGENER Browser — \`agent_browser_*\` (Playwright, persistent profile ~/.jarvis/agent-browser):
+- Dies ist DEIN Browser, nicht der des Users. Er hat eigene Cookies, bleibt eingeloggt über Tasks hinweg, ist headful sichtbar. Nutze ihn wenn du dich FÜR den User einloggen und handeln sollst: canva.com (mit AI Logo generieren), zalando.de (3 Produkte suchen + Warenkorb), fiverr.com, etc.
+- Workflow: \`agent_browser_navigate\` → \`agent_browser_read\` → \`agent_browser_click\`/\`fill\`/\`type\` → \`agent_browser_screenshot\` zum Prüfen, dann wieder read. Für Google-Login: navigiere zu canva.com → click Login → click "Mit Google fortfahren" → wähle moser.joshuam.00@gmail.com (bereits im Profil oder neu anmelden), dann weiter.
+- Beispiele: "canva.com anmelden und mit AI ein Logo generieren" → agent_browser_navigate canva.com → login → AI Logo Tool → generieren → screenshot. "zalando anmelden und 3 Produkte in Warenkorb" → navigate zalando.de → login → suche 3x → je Produkt click → Warenkorb.
+- Immer zuerst agent_browser_read, dann handeln. Zeige Ergebnis via blade oder screenshot.
 
 Your eyes:
 - \`look\` takes one frame and lets you see it. \`watch\` takes several seconds and
@@ -1473,6 +1481,7 @@ wss.on('connection', (socket) => {
         jarvis_business: businessServer(),
         jarvis_brains: brainsServer(),
         jarvis_ceo: ceoServer(),
+        jarvis_agent_browser: agentBrowserServer(),
         // The user's own Chrome, over the extension's native-host socket. It
         // holds no per-connection state, but it is built here with the rest so
         // the write gate is read once, at the same point as everything else.
